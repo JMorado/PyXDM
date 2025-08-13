@@ -1,15 +1,15 @@
 """XDM calculation session management."""
 
-import io
 import sys
+import logging
 from pathlib import Path
 from typing import Optional
 
 from ..grids import load_mesh, CustomGrid
-from ..utils import logger
 from ..partitioning import PartitioningSchemeFactory
 from ..core import XDMCalculator
-from ..utils.logger import suppress_horton_output
+
+logger = logging.getLogger(__name__)
 
 try:
     import horton as ht
@@ -29,8 +29,6 @@ class XDMSession:
     ----------
     wfn_file : Path
         Path to the wavefunction file
-    verbose : bool
-        Enable verbose output
     mol : object or None
         Loaded molecule object
     grid : object or None
@@ -41,7 +39,7 @@ class XDMSession:
         Dictionary of partition objects
     """
 
-    def __init__(self, wfn_file: str, verbose: bool = False) -> None:
+    def __init__(self, wfn_file: str) -> None:
         """
         Initialize XDM calculation session.
 
@@ -49,15 +47,12 @@ class XDMSession:
         ----------
         wfn_file : str
             Path to the wavefunction file
-        verbose : bool, optional
-            Enable verbose output, default False
 
         Returns
         -------
         None
         """
         self.wfn_file = Path(wfn_file)
-        self.verbose = verbose
         self.mol = None
         self.grid = None
         self.calculator = None
@@ -72,18 +67,7 @@ class XDMSession:
         None
         """
         try:
-            if self.verbose:
-                self.mol = ht.IOData.from_file(str(self.wfn_file))
-            else:
-                # Suppress horton output for cleaner interface
-                original_stdout, original_stderr = sys.stdout, sys.stderr
-                try:
-                    sys.stdout = sys.stderr = io.StringIO()
-                    self.mol = ht.IOData.from_file(str(self.wfn_file))
-                finally:
-                    sys.stdout, sys.stderr = original_stdout, original_stderr
-                    if hasattr(ht, "log"):
-                        ht.log.set_level(ht.log.warning)
+            self.mol = ht.IOData.from_file(str(self.wfn_file))
         except Exception as e:
             logger.error(f"Error loading wavefunction file: {e}")
             sys.exit(1)
@@ -108,13 +92,12 @@ class XDMSession:
             try:
                 mesh_points, mesh_weights = load_mesh(mesh_file)
                 self.grid = CustomGrid(mesh_points, mesh_weights)
-                if self.verbose:
-                    logger.info(f"Loaded custom mesh with {len(mesh_points)} points")
+                logger.info(f"Loaded custom mesh with {len(mesh_points)} points")
             except Exception as e:
                 logger.error(f"Error loading mesh file: {e}")
                 sys.exit(1)
         else:
-            agspec = ht.AtomicGridSpec("fine")
+            agspec = ht.AtomicGridSpec("ultrafine")
             self.grid = ht.BeckeMolGrid(
                 self.mol.coordinates,
                 self.mol.numbers,
@@ -123,8 +106,7 @@ class XDMSession:
                 mode="keep",
                 random_rotate=False,
             )
-            if self.verbose:
-                logger.info(f"Using Becke grid with {len(self.grid.points)} points")
+            logger.info(f"Using Becke grid with {len(self.grid.points)} points")
 
     def setup_calculator(self) -> None:
         """
@@ -135,17 +117,12 @@ class XDMSession:
         None
         """
         if not self.mol or not self.grid:
-            raise RuntimeError(
-                "Molecule and grid must be set up before creating calculator"
-            )
+            raise RuntimeError("Molecule and grid must be set up before creating calculator")
 
         self.calculator = XDMCalculator(self.mol)
-        if self.verbose:
-            logger.info("XDM calculator initialized")
+        logger.debug("XDM calculator initialized")
 
-    def setup_partition_schemes(
-        self, schemes: list[str], proatomdb: Optional[str] = None
-    ) -> dict:
+    def setup_partition_schemes(self, schemes: list[str], proatomdb: Optional[str] = None) -> dict:
         """
         Setup partitioning schemes for the session.
 
@@ -170,15 +147,9 @@ class XDMSession:
                 if proatomdb:
                     scheme_kwargs["proatom_db"] = proatomdb
 
-                partitioning = PartitioningSchemeFactory.create_scheme(
-                    scheme, **scheme_kwargs
-                )
+                partitioning = PartitioningSchemeFactory.create_scheme(scheme, **scheme_kwargs)
 
-                if self.verbose:
-                    partitioning.compute_weights(self.mol, self.grid)
-                else:
-                    with suppress_horton_output(show_warnings=True):
-                        partitioning.compute_weights(self.mol, self.grid)
+                partitioning.compute_weights(self.mol, self.grid)
 
                 partition_obj = partitioning.get_partition_object()
                 if partition_obj is not None:

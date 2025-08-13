@@ -43,14 +43,12 @@ pyxdm <wfn_file> [--mesh <mesh_file>] [--scheme <scheme>] [--order <orders>] [--
 - `<wfn_file>`: Path to the wavefunction file (Molden, WFN, etc.)
 - `--mesh`: Optional custom mesh file for integration grid
 - `--scheme`: Partitioning scheme to use (default: all available)
-- `--order`: Multipole orders to calculate (e.g., 1 2 3)
 - `--proatomdb`: Path to proatom database (required for Hirshfeld schemes)
-- `-v`, `--verbose`: Enable verbose output
 
 #### Example
 
 ```bash
-pyxdm orca.molden.input --scheme mbis --order 1 2 3 
+pyxdm orca.molden.input --scheme mbis 
 ```
 
 ### Python API
@@ -60,7 +58,7 @@ You can also use PyXDM as a library in your own Python scripts:
 ```python
 from pyxdm.core import XDMSession
 
-session = XDMSession('examples/water/orca.molden.input', verbose=True)
+session = XDMSession('examples/water/orca.molden.input')
 session.load_molecule()
 session.setup_grid()
 session.setup_calculator()

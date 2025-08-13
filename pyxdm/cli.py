@@ -5,9 +5,11 @@ import sys
 
 from .core import XDMSession
 from .partitioning import PartitioningSchemeFactory
-from .utils import logger
+from .utils.formatting import log_mol_info, log_table, log_boxed_title, log_charges_populations, get_atomic_symbol
+import logging
+import numpy as np
 
-DEFAULT_MULTIPOLE_ORDERS = [1, 2, 3]
+logger = logging.getLogger(__name__)
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -36,23 +38,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--order",
-        type=int,
-        nargs="+",
-        default=None,
-        help="Multipole orders (1=dipole, 2=quadrupole, etc.) - if not specified, calculates l=1,2,3",
-    )
-
-    parser.add_argument(
         "--proatomdb",
         help="Path to proatom database file (required for Hirshfeld schemes)",
-    )
-
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Verbose output",
     )
 
     return parser
@@ -73,41 +60,54 @@ def main() -> None:
 
     try:
         # Initialize session and load molecule
-        session: XDMSession = XDMSession(args.wfn_file, verbose=args.verbose)
+        session: XDMSession = XDMSession(args.wfn_file)
         session.load_molecule()
         session.setup_grid(args.mesh)
         session.setup_calculator()
         session.setup_partition_schemes(
-            [args.scheme]
-            if args.scheme
-            else PartitioningSchemeFactory.available_schemes(),
+            [args.scheme] if args.scheme else PartitioningSchemeFactory.available_schemes(),
             proatomdb=args.proatomdb,
         )
 
-        orders: list[int] = (
-            args.order if args.order is not None else DEFAULT_MULTIPOLE_ORDERS
-        )
+        at_symbols = [get_atomic_symbol(num) for num in session.mol.numbers]
+
+        # Log loaded molecule information
+        log_mol_info(session.mol)
 
         if session.partitions is not None:
             for scheme, partition_obj in session.partitions.items():
-                logger.info(f"Using partitioning scheme: {scheme}")
+                log_boxed_title(f"AIM Scheme: {scheme.upper()}", logger=logger)
+                log_charges_populations(session, partition_obj, logger)
 
                 # Compute partitions if needed
                 if session.calculator is not None:
-                    atomic_results, total_results = session.calculator.calculate_moments(
+                    atomic_results = session.calculator.calculate_moments(
                         partition_obj=partition_obj,
                         grid=session.grid,
-                        multipole_orders=orders,
+                        multipole_orders=[1, 2, 3],
                     )
-                    print(atomic_results)
                 else:
                     logger.error("No calculator available for session.")
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        if args.verbose:
-            import traceback
 
-            traceback.print_exc()
+                # Log atomic data
+                atomic_data = {}
+                for key in atomic_results:
+                    atomic_data[key] = list(atomic_results[key]) + [np.sum(atomic_results[key])]
+
+                log_table(
+                    logger,
+                    columns=["<M1^2>", "<M2^2>", "<M3^2>"],
+                    rows=at_symbols + ["Σ_atoms"],
+                    data=np.column_stack([atomic_data[key] for key in atomic_data]),
+                )
+
+        log_boxed_title("PyXDM terminated successfully! :)", logger=logger)
+
+    except Exception as e:
+        import traceback
+
+        logger.error(f"Error: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
 

@@ -1,14 +1,11 @@
 """Formatting utilities for XDM output."""
 
-import numpy as np
-from typing import List, Optional, Dict, Set, Union
+import logging
+import horton as ht
 
-from . import logger
-
+logger = logging.getLogger(__name__)
 # Constants for formatting
 ATOMIC_SYMBOLS = {1: "H", 6: "C", 7: "N", 8: "O", 9: "F", 15: "P", 16: "S", 17: "Cl"}
-MULTIPOLE_ORDER_NAMES = {1: "M1^2", 2: "M2^2", 3: "M3^2"}
-MULTIPOLE_FULL_NAMES = {1: "Dipole", 2: "Quadrupole", 3: "Octupole"}
 
 
 def get_atomic_symbol(atomic_number: int) -> str:
@@ -50,145 +47,135 @@ def format_scientific(value: float, precision: int = 6) -> str:
         return f"{value:.{precision}E}"
 
 
-
-def print_table(
-    data: List[List[str]], headers: List[str], title: Optional[str] = None
-) -> None:
+def log_mol_info(mol: ht.IOData) -> None:
     """
-    Print a formatted table using logger.
+    Log information about the loaded molecule.
 
     Parameters
     ----------
-    data : list of list of str
-        Table data as list of rows
-    headers : list of str
-        Column headers
-    title : str, optional
-        Table title
+    mol : ht.IOData
+        Loaded molecule object
     """
+    logger.info("Loaded molecule information:")
+    logger.info(f"No. of atoms: {mol.natom}")
+    logger.info(f"Atomic numbers: {mol.numbers}")
+    logger.info(f"Pseudo atomic numbers: {mol.pseudo_numbers}")
+    log_table(
+        logger,
+        columns=["x", "y", "z"],
+        rows=[get_atomic_symbol(num) for num in mol.numbers],
+        data=mol.coordinates,
+        title="Coordinates [bohr]",
+    )
+
+
+def log_table(logger, columns, rows, data, level="info", title=None, scientific_notation=True):
+    """
+    Log a clean, aligned table with optional title.
+
+    Title is printed above the table with an underline.
+    """
+
+    def log(msg):
+        getattr(logger, level)(msg)
+
+    log("")
+
+    n_rows = len(rows)
+    n_cols = len(columns)
+
+    formatted_data = []
+    for r_idx in range(n_rows):
+        row_vals = []
+        for c_idx in range(n_cols):
+            val = data[r_idx][c_idx]
+            val_str = format_scientific(val) if scientific_notation else str(val)
+            row_vals.append(val_str)
+        formatted_data.append(row_vals)
+
+    col_widths = [max(len(str(columns[c])), *(len(formatted_data[r][c]) for r in range(n_rows))) for c in range(n_cols)]
+    row_label_width = max(len(str(r)) for r in rows) if rows else 0
+
     if title:
-        logger.header(title)
+        log(title)
+        # log("-" * max(len(title), row_label_width + 2 + sum(col_widths) + 2 * n_cols))
 
-    # Calculate column widths
-    col_widths = []
-    for i, header in enumerate(headers):
-        max_width = len(header)
-        for row in data:
-            if i < len(row):
-                max_width = max(max_width, len(str(row[i])))
-        col_widths.append(max_width + 2)
+    header = " " * row_label_width + "  " + "  ".join(str(columns[i]).rjust(col_widths[i]) for i in range(n_cols))
+    log(header)
+    # log("-" * len(header))
 
-    # Print header
-    header_line = ""
-    for i, header in enumerate(headers):
-        if i == 0:
-            header_line += f"  {header:<{col_widths[i] - 2}}"
-        else:
-            header_line += f"{header:>{col_widths[i]}}"
-    logger.info(header_line)
+    for r_idx, row_label in enumerate(rows):
+        row_values = [formatted_data[r_idx][c].rjust(col_widths[c]) for c in range(n_cols)]
+        log(str(row_label).ljust(row_label_width) + "  " + "  ".join(row_values))
 
-    # Print data rows
-    for row in data:
-        data_line = ""
-        for i, cell in enumerate(row):
-            if i < len(col_widths):
-                if i == 0:
-                    data_line += f"  {str(cell):<{col_widths[i] - 2}}"
-                else:
-                    data_line += f"{str(cell):>{col_widths[i]}}"
-        logger.info(data_line)
-    logger.info("")
+    log("")
 
 
-def print_results(
-    results: Dict[int, Dict[str, Dict[str, Union[np.ndarray, float]]]],
-    orders: List[int],
-    mol: object,
-    wfn_file: str,
-    mesh_file: Optional[str] = None,
-) -> None:
+def log_boxed_title(title: str, width: int = 50, logger=None, level="info"):
     """
-    Print calculation results in formatted tables.
+    Print or log a title inside a box of given width.
 
     Parameters
     ----------
-    results : dict
-        Results dictionary with structure {order: {scheme: {atomic/total: values}}}
-    orders : list of int
-        List of multipole orders calculated
-    mol : object
-        Molecule object
-    wfn_file : str
-        Path to wavefunction file
-    mesh_file : str, optional
-        Path to mesh file if used
+    title : str
+        The text to display inside the box.
+    width : int
+        Total width of the box (including borders).
+    logger : logging.Logger, optional
+        If provided, logs the box instead of printing.
+    level : str
+        Logging level if logger is provided ("info", "warning", etc.).
     """
-    if not results:
-        logger.warning("No successful calculations to display.")
-        return
 
-    all_schemes_set: Set[str] = set()
-    for order in orders:
-        if order in results:
-            all_schemes_set.update(results[order].keys())
-    all_schemes = sorted(list(all_schemes_set))
+    def log(msg):
+        getattr(logger, level)(msg)
 
-    if not all_schemes:
-        logger.warning("No successful calculations to display.")
-        return
+    # Ensure width is enough for borders
+    width = max(width, len(title) + 4)
+    border = "+" + "-" * (width - 2) + "+"
+    log(border)
+    log("|" + title.center(width - 2) + "|")
+    log(border)
 
-    logger.header("PYXDM OUTPUT")
-    logger.info("XDM multipole moments calculation")
-    logger.info(f"Wavefunction file: {wfn_file}")
-    if mesh_file:
-        logger.info(f"Mesh file: {mesh_file}")
-    logger.info(f"Number of atoms: {getattr(mol, 'natom', 'unknown')}")
-    logger.info("")
 
-    # Get number of atoms from first successful result
-    first_order = next(iter(results.keys()))
-    first_scheme = next(iter(results[first_order].keys()))
-    atomic_data_sample = results[first_order][first_scheme]["atomic"]
-    n_atoms = len(atomic_data_sample) if hasattr(atomic_data_sample, '__len__') else 1
+def log_charges_populations(session, partition_obj, logger, level="info"):
+    """
+    Compute and log atomic charges and populations in a table.
 
-    for scheme in all_schemes:
-        scheme_name = scheme.upper().replace("-", " ")
-        logger.header(f"{scheme_name}")
-        logger.subheader("Moments")
+    Parameters
+    ----------
+    session : object
+        Session object containing molecule and calculator.
+    partition_obj : object
+        Object providing atomic grids and cached weights.
+    logger : logging.Logger
+        Logger instance to log table.
+    level : str
+        Logging level ("info", "warning", etc.).
+    """
+    import numpy as np
 
-        # Atomic moments table
-        headers = ["i", "At"]
-        for order in orders:
-            if order in results and scheme in results[order]:
-                headers.append(f"<{MULTIPOLE_ORDER_NAMES[order]}>")
+    charges = []
+    populations = []
 
-        atomic_data = []
-        for i in range(n_atoms):
-            atomic_numbers = getattr(mol, 'numbers', [None]*n_atoms)
-            atomic_number = atomic_numbers[i] if isinstance(atomic_numbers, (list, tuple)) else None
-            symbol = get_atomic_symbol(int(atomic_number) if atomic_number is not None else 0)
+    for i in range(session.mol.natom):
+        subgrid = partition_obj.get_grid(i)
+        weights_i = partition_obj.cache.load("at_weights", i)
+        rho_subgrid = session.mol.obasis.compute_grid_density_dm(session.calculator.dm_full, subgrid.points)
+        population = subgrid.integrate(weights_i * rho_subgrid)
+        charge = session.mol.numbers[i] - population
 
-            row = [f"{i + 1}", symbol]
-            for order in orders:
-                if order in results and scheme in results[order]:
-                    atomic_moments = results[order][scheme]["atomic"]
-                    moment = atomic_moments[i] if hasattr(atomic_moments, '__getitem__') else atomic_moments
-                    row.append(format_scientific(moment))
-                else:
-                    row.append("    -    ")
-            atomic_data.append(row)
+        populations.append(population)
+        charges.append(charge)
 
-        print_table(atomic_data, headers)
+    populations.append(np.sum(populations))
+    charges.append(np.sum(charges))
 
-        # Total moments table
-        logger.subheader("Total moments")
-        total_headers = ["Order", "Moment", "Value"]
-        total_data = []
-
-        for order in orders:
-            if order in results and scheme in results[order]:
-                total = results[order][scheme]["total"]
-                order_name = MULTIPOLE_FULL_NAMES.get(order, f"L={order}")
-                total_data.append([f"L={order}", order_name, format_scientific(total)])
-
-        print_table(total_data, total_headers)
+    log_table(
+        logger=logger,
+        columns=["Charge [e]", "Population [e]"],
+        rows=[get_atomic_symbol(num) for num in session.mol.numbers] + ["Σ_atoms"],
+        data=np.column_stack((charges, populations)),
+        level=level,
+        scientific_notation=True,
+    )

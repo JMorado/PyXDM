@@ -1,14 +1,12 @@
 """Core XDM calculations with comprehensive type hints and documentation."""
 
-from __future__ import annotations
-
 import numpy as np
-from typing import TYPE_CHECKING, Any
+from typing import Any
+import logging
 
 from .exchange_hole import compute_b_sigma
 
-if TYPE_CHECKING:
-    pass
+logger = logging.getLogger(__name__)
 
 
 class XDMCalculator:
@@ -105,29 +103,17 @@ class XDMCalculator:
         rho_beta = self.mol.obasis.compute_grid_density_dm(self.dm_beta, grid_points)
 
         # Kinetic energy densities
-        tau_alpha = (
-            self.mol.obasis.compute_grid_kinetic_dm(self.dm_alpha, grid_points) * 2.0
-        )
-        tau_beta = (
-            self.mol.obasis.compute_grid_kinetic_dm(self.dm_beta, grid_points) * 2.0
-        )
+        tau_alpha = self.mol.obasis.compute_grid_kinetic_dm(self.dm_alpha, grid_points) * 2.0
+        tau_beta = self.mol.obasis.compute_grid_kinetic_dm(self.dm_beta, grid_points) * 2.0
 
         # Hessians and gradients
-        hessian_alpha = self.mol.obasis.compute_grid_hessian_dm(
-            self.dm_alpha, grid_points
-        )
-        hessian_beta = self.mol.obasis.compute_grid_hessian_dm(
-            self.dm_beta, grid_points
-        )
-        nabla_alpha = self.mol.obasis.compute_grid_gradient_dm(
-            self.dm_alpha, grid_points
-        )
+        hessian_alpha = self.mol.obasis.compute_grid_hessian_dm(self.dm_alpha, grid_points)
+        hessian_beta = self.mol.obasis.compute_grid_hessian_dm(self.dm_beta, grid_points)
+        nabla_alpha = self.mol.obasis.compute_grid_gradient_dm(self.dm_alpha, grid_points)
         nabla_beta = self.mol.obasis.compute_grid_gradient_dm(self.dm_beta, grid_points)
 
         # Laplacians
-        laplacian_alpha = (
-            hessian_alpha[:, 0] + hessian_alpha[:, 3] + hessian_alpha[:, 5]
-        )
+        laplacian_alpha = hessian_alpha[:, 0] + hessian_alpha[:, 3] + hessian_alpha[:, 5]
         laplacian_beta = hessian_beta[:, 0] + hessian_beta[:, 3] + hessian_beta[:, 5]
 
         # Gradient magnitudes squared
@@ -186,12 +172,8 @@ class XDMCalculator:
         r_i = np.linalg.norm(grid.points - self.mol.coordinates[atom_idx], axis=1)
 
         # Cap b_sigma values
-        b_alpha_capped = np.minimum(
-            np.maximum(density_props["b_alpha"], 1e-10), r_i * 0.99
-        )
-        b_beta_capped = np.minimum(
-            np.maximum(density_props["b_beta"], 1e-10), r_i * 0.99
-        )
+        b_alpha_capped = np.minimum(np.maximum(density_props["b_alpha"], 1e-10), r_i * 0.99)
+        b_beta_capped = np.minimum(np.maximum(density_props["b_beta"], 1e-10), r_i * 0.99)
 
         # Exchange hole terms
         r_minus_b_alpha = np.maximum(0.0, r_i - b_alpha_capped)
@@ -210,9 +192,7 @@ class XDMCalculator:
 
         return float(lambda2_alpha + lambda2_beta)
 
-    def calculate_moments(
-        self, partition_obj: Any, grid: Any, multipole_orders: list[int]
-    ) -> tuple[dict, dict]:
+    def calculate_moments(self, partition_obj: Any, grid: Any, multipole_orders: list[int]) -> tuple[dict, dict]:
         """
         Calculate XDM multipole moments for all atoms.
 
@@ -227,53 +207,25 @@ class XDMCalculator:
 
         Returns
         -------
-        tuple of dict
-            Tuple of (atomic_results, total_results) dictionaries
-            Each dictionary has multipole_order as keys
+        dict
+            Dictionary with atomic multipoles.
         """
+        logger.debug("Calculating XDM multiples moments for all atoms...")
         atomic_results = {}
 
         if hasattr(partition_obj, "get_grid"):
-            # Using a local grid with partition weights
             for atom_idx in range(self.n_atoms):
                 grid = partition_obj.get_grid(atom_idx)
+                logger.debug(f"Atom {atom_idx} grid size = {len(grid.points)}")
                 weights_i = partition_obj.cache.load("at_weights", atom_idx)
-
-                # Compute density properties on the local grid
                 density_props = self._compute_density_properties(grid.points)
-
                 for order in multipole_orders:
-                    atomic_moment = self._compute_moment_for_atom(
-                        atom_idx, grid, weights_i, order, density_props
-                    )
+                    atomic_moment = self._compute_moment_for_atom(atom_idx, grid, weights_i, order, density_props)
                     if order not in atomic_results:
                         atomic_results[order] = np.zeros(self.n_atoms)
                     atomic_results[order][atom_idx] = atomic_moment
 
         else:
-            # Using a global grid with partition weights
-            weights = partition_obj.cache.load("at_weights")
+            raise ValueError("")
 
-            # Compute density properties on the global grid
-            density_props = self._compute_density_properties(grid.points)
-
-            for order in multipole_orders:
-                atomic_moments = np.zeros(self.n_atoms)
-
-                for atom_idx in range(self.n_atoms):
-                    atomic_moments[atom_idx] = self._compute_moment_for_atom(
-                        atom_idx, grid, weights[atom_idx], order, density_props
-                    )
-
-                atomic_results[order] = atomic_moments
-
-        # Aggregate total results across all atoms
-        total_results = {}
-        for order in multipole_orders:
-            if order not in total_results:
-                total_results[order] = 0.0
-            total_results[order] += np.sum(
-                atomic_results.get(order, np.zeros(self.n_atoms))
-            )
-
-        return atomic_results, total_results
+        return atomic_results

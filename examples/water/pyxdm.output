@@ -1,0 +1,117 @@
+2025-08-13 19:34:41 INFO     pyxdm.logger                   
+2025-08-13 19:34:41 INFO     pyxdm.logger                   
+2025-08-13 19:34:41 INFO     pyxdm.logger                   +=====================================================+
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |                                                     |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |                                                     |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |  __________        ____  ___________      _____     |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |  \______   \___.__.\   \/  /\______ \    /     \    |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |   |     ___<   |  | \     /  |    |  \  /  \ /  \   |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |   |    |    \___  | /     \  |    `   \/    Y    \  |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |   |____|    / ____|/___/\  \/_______  /\____|__  /  |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |             \/           \_/        \/         \/   |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |                                                     |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |                                                     |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   |  version: 0.1.0                                     |
+2025-08-13 19:34:41 INFO     pyxdm.logger                   +=====================================================+
+2025-08-13 19:34:41 INFO     pyxdm.logger                   
+2025-08-13 19:34:41 INFO     pyxdm.logger                   
+2025-08-13 19:34:41 INFO     pyxdm.core.session             Using Becke grid with 28030 points
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         Loaded molecule information:
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         No. of atoms: 3
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         Atomic numbers: [8 1 1]
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         Pseudo atomic numbers: [8. 1. 1.]
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         Coordinates [bohr]
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting                       x             y             z
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         O  2.984239E+01  2.917396E+01  3.018207E+01
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         H  2.923033E+01  3.087764E+01  2.995915E+01
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         H  2.950194E+01  2.852306E+01  2.843345E+01
+2025-08-13 19:34:42 INFO     pyxdm.utils.formatting         
+2025-08-13 19:34:42 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:42 INFO     pyxdm.cli                      |                AIM Scheme: MBIS                |
+2025-08-13 19:34:42 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:42 INFO     pyxdm.cli                      
+2025-08-13 19:34:42 INFO     pyxdm.cli                                  Charge [e]  Population [e]
+2025-08-13 19:34:42 INFO     pyxdm.cli                      O        -8.017805E-01    8.801780E+00
+2025-08-13 19:34:42 INFO     pyxdm.cli                      H         4.061459E-01    5.938541E-01
+2025-08-13 19:34:42 INFO     pyxdm.cli                      H         3.955316E-01    6.044684E-01
+2025-08-13 19:34:42 INFO     pyxdm.cli                      Σ_atoms  -1.030195E-04    1.000010E+01
+2025-08-13 19:34:42 INFO     pyxdm.cli                      
+2025-08-13 19:34:44 INFO     pyxdm.cli                      
+2025-08-13 19:34:44 INFO     pyxdm.cli                                     <M1^2>        <M2^2>        <M3^2>
+2025-08-13 19:34:44 INFO     pyxdm.cli                      O        6.427076E+00  5.560049E+01  5.469204E+02
+2025-08-13 19:34:44 INFO     pyxdm.cli                      H        7.045823E-01  3.067856E+00  2.349078E+01
+2025-08-13 19:34:44 INFO     pyxdm.cli                      H        7.658385E-01  3.521315E+00  2.861503E+01
+2025-08-13 19:34:44 INFO     pyxdm.cli                      Σ_atoms  7.897497E+00  6.218967E+01  5.990262E+02
+2025-08-13 19:34:44 INFO     pyxdm.cli                      
+2025-08-13 19:34:44 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:44 INFO     pyxdm.cli                      |               AIM Scheme: BECKE                |
+2025-08-13 19:34:44 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:44 INFO     pyxdm.cli                      
+2025-08-13 19:34:44 INFO     pyxdm.cli                                  Charge [e]  Population [e]
+2025-08-13 19:34:44 INFO     pyxdm.cli                      O        -1.780233E-01    8.178023E+00
+2025-08-13 19:34:44 INFO     pyxdm.cli                      H         7.641110E-02    9.235889E-01
+2025-08-13 19:34:44 INFO     pyxdm.cli                      H         1.016122E-01    8.983878E-01
+2025-08-13 19:34:44 INFO     pyxdm.cli                      Σ_atoms   7.379879E-08    1.000000E+01
+2025-08-13 19:34:44 INFO     pyxdm.cli                      
+2025-08-13 19:34:50 INFO     pyxdm.cli                      
+2025-08-13 19:34:50 INFO     pyxdm.cli                                     <M1^2>        <M2^2>        <M3^2>
+2025-08-13 19:34:50 INFO     pyxdm.cli                      O        5.085833E+00  3.652633E+01  2.935490E+02
+2025-08-13 19:34:50 INFO     pyxdm.cli                      H        1.272423E+00  5.574546E+00  4.219985E+01
+2025-08-13 19:34:50 INFO     pyxdm.cli                      H        1.277471E+00  5.681043E+00  4.391891E+01
+2025-08-13 19:34:50 INFO     pyxdm.cli                      Σ_atoms  7.635727E+00  4.778192E+01  3.796678E+02
+2025-08-13 19:34:50 INFO     pyxdm.cli                      
+2025-08-13 19:34:50 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:50 INFO     pyxdm.cli                      |             AIM Scheme: HIRSHFELD              |
+2025-08-13 19:34:50 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:50 INFO     pyxdm.cli                      
+2025-08-13 19:34:50 INFO     pyxdm.cli                                  Charge [e]  Population [e]
+2025-08-13 19:34:50 INFO     pyxdm.cli                      O        -2.988256E-01    8.298826E+00
+2025-08-13 19:34:50 INFO     pyxdm.cli                      H         1.464540E-01    8.535460E-01
+2025-08-13 19:34:50 INFO     pyxdm.cli                      H         1.523717E-01    8.476283E-01
+2025-08-13 19:34:50 INFO     pyxdm.cli                      Σ_atoms   7.379618E-08    1.000000E+01
+2025-08-13 19:34:50 INFO     pyxdm.cli                      
+2025-08-13 19:34:56 INFO     pyxdm.cli                      
+2025-08-13 19:34:56 INFO     pyxdm.cli                                     <M1^2>        <M2^2>        <M3^2>
+2025-08-13 19:34:56 INFO     pyxdm.cli                      O        5.061454E+00  3.618111E+01  2.735991E+02
+2025-08-13 19:34:56 INFO     pyxdm.cli                      H        1.341084E+00  1.027657E+01  1.270852E+02
+2025-08-13 19:34:56 INFO     pyxdm.cli                      H        1.359401E+00  1.029214E+01  1.270673E+02
+2025-08-13 19:34:56 INFO     pyxdm.cli                      Σ_atoms  7.761940E+00  5.674982E+01  5.277516E+02
+2025-08-13 19:34:56 INFO     pyxdm.cli                      
+2025-08-13 19:34:56 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:56 INFO     pyxdm.cli                      |            AIM Scheme: HIRSHFELD-I             |
+2025-08-13 19:34:56 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:34:57 INFO     pyxdm.cli                      
+2025-08-13 19:34:57 INFO     pyxdm.cli                                  Charge [e]  Population [e]
+2025-08-13 19:34:57 INFO     pyxdm.cli                      O        -8.450764E-01    8.845076E+00
+2025-08-13 19:34:57 INFO     pyxdm.cli                      H         4.278552E-01    5.721448E-01
+2025-08-13 19:34:57 INFO     pyxdm.cli                      H         4.172213E-01    5.827787E-01
+2025-08-13 19:34:57 INFO     pyxdm.cli                      Σ_atoms   7.378980E-08    1.000000E+01
+2025-08-13 19:34:57 INFO     pyxdm.cli                      
+2025-08-13 19:35:03 INFO     pyxdm.cli                      
+2025-08-13 19:35:03 INFO     pyxdm.cli                                     <M1^2>        <M2^2>        <M3^2>
+2025-08-13 19:35:03 INFO     pyxdm.cli                      O        6.141086E+00  4.928119E+01  4.132023E+02
+2025-08-13 19:35:03 INFO     pyxdm.cli                      H        8.651439E-01  6.023685E+00  7.180568E+01
+2025-08-13 19:35:03 INFO     pyxdm.cli                      H        9.022050E-01  6.217817E+00  7.391805E+01
+2025-08-13 19:35:03 INFO     pyxdm.cli                      Σ_atoms  7.908434E+00  6.152270E+01  5.589260E+02
+2025-08-13 19:35:03 INFO     pyxdm.cli                      
+2025-08-13 19:35:03 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:35:03 INFO     pyxdm.cli                      |       AIM Scheme: ITERATIVE-STOCKHOLDER        |
+2025-08-13 19:35:03 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:35:03 INFO     pyxdm.cli                      
+2025-08-13 19:35:03 INFO     pyxdm.cli                                  Charge [e]  Population [e]
+2025-08-13 19:35:03 INFO     pyxdm.cli                      O        -7.727665E-01    8.772767E+00
+2025-08-13 19:35:03 INFO     pyxdm.cli                      H         3.917583E-01    6.082417E-01
+2025-08-13 19:35:03 INFO     pyxdm.cli                      H         3.809341E-01    6.190659E-01
+2025-08-13 19:35:03 INFO     pyxdm.cli                      Σ_atoms  -7.412419E-05    1.000007E+01
+2025-08-13 19:35:03 INFO     pyxdm.cli                      
+2025-08-13 19:35:05 INFO     pyxdm.cli                      
+2025-08-13 19:35:05 INFO     pyxdm.cli                                     <M1^2>        <M2^2>        <M3^2>
+2025-08-13 19:35:05 INFO     pyxdm.cli                      O        6.226421E+00  5.099489E+01  4.464269E+02
+2025-08-13 19:35:05 INFO     pyxdm.cli                      H        7.919861E-01  4.229892E+00  4.225525E+01
+2025-08-13 19:35:05 INFO     pyxdm.cli                      H        8.500969E-01  4.662525E+00  4.760248E+01
+2025-08-13 19:35:05 INFO     pyxdm.cli                      Σ_atoms  7.868504E+00  5.988730E+01  5.362846E+02
+2025-08-13 19:35:05 INFO     pyxdm.cli                      
+2025-08-13 19:35:05 INFO     pyxdm.cli                      +------------------------------------------------+
+2025-08-13 19:35:05 INFO     pyxdm.cli                      |       PyXDM terminated successfully! :)        |
+2025-08-13 19:35:05 INFO     pyxdm.cli                      +------------------------------------------------+

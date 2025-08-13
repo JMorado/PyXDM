@@ -175,9 +175,7 @@ class HirshfeldPartitioning(PartitioningScheme):
         from horton.part.proatomdb import ProAtomDB
 
         if self.proatom_db is None:
-            raise ValueError(
-                "Hirshfeld partitioning requires proatom_db path. Use --proatomdb argument."
-            )
+            raise ValueError("Hirshfeld partitioning requires proatom_db path. Use --proatomdb argument.")
 
         # Use the provided grid directly - no need to create a new one
         horton_grid = grid
@@ -258,9 +256,7 @@ class HirshfeldIPartitioning(PartitioningScheme):
         from horton.part.proatomdb import ProAtomDB
 
         if self.proatom_db is None:
-            raise ValueError(
-                "Hirshfeld-I partitioning requires proatom_db path. Use --proatomdb argument."
-            )
+            raise ValueError("Hirshfeld-I partitioning requires proatom_db path. Use --proatomdb argument.")
 
         # Use the provided grid directly - no need to create a new one
         horton_grid = grid
@@ -346,9 +342,7 @@ class IterativeStockholderPartitioning(PartitioningScheme):
         try:
             from horton.part import IterativeStockholderWPart
         except ImportError:
-            raise ImportError(
-                "Horton library is required for Iterative Stockholder partitioning"
-            )
+            raise ImportError("Horton library is required for Iterative Stockholder partitioning")
 
         # Compute total density on the grid
         dm_full = mol.get_dm_full()
@@ -443,13 +437,11 @@ class PartitioningSchemeFactory:
         "becke": BeckePartitioning,
         "hirshfeld": HirshfeldPartitioning,
         "hirshfeld-i": HirshfeldIPartitioning,
-        "iterstock": IterativeStockholderPartitioning,
         "iterative-stockholder": IterativeStockholderPartitioning,
-        "is": IterativeStockholderPartitioning,
     }
 
     @classmethod
-    def create_scheme(cls, scheme_name: str, **kwargs: Any) -> 'PartitioningScheme':
+    def create_scheme(cls, scheme_name: str, **kwargs: Any) -> "PartitioningScheme":
         """
         Create a partitioning scheme.
 
@@ -458,7 +450,7 @@ class PartitioningSchemeFactory:
         scheme_name : str
             Name of the partitioning scheme to create.
             Available schemes: 'mbis', 'becke', 'hirshfeld', 'hirshfeld-i',
-            'iterstock', 'iterative-stockholder', 'is'
+            'iterative-stockholder'
         **kwargs
             Additional keyword arguments passed to the scheme constructor.
             Different schemes accept different parameters:
@@ -480,9 +472,7 @@ class PartitioningSchemeFactory:
         """
         if scheme_name not in cls._schemes:
             available = ", ".join(cls._schemes.keys())
-            raise ValueError(
-                f"Unknown partitioning scheme '{scheme_name}'. Available: {available}"
-            )
+            raise ValueError(f"Unknown partitioning scheme '{scheme_name}'. Available: {available}")
 
         # Filter kwargs based on scheme requirements
         if scheme_name in ["becke"]:
@@ -493,21 +483,13 @@ class PartitioningSchemeFactory:
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["proatom_db"]}
         elif scheme_name in ["hirshfeld-i"]:
             # Hirshfeld-I accepts proatom_db, maxiter, threshold
-            filtered_kwargs = {
-                k: v
-                for k, v in kwargs.items()
-                if k in ["proatom_db", "maxiter", "threshold"]
-            }
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["proatom_db", "maxiter", "threshold"]}
         elif scheme_name in ["iterstock", "iterative-stockholder", "is"]:
             # Iterative Stockholder accepts maxiter, threshold
-            filtered_kwargs = {
-                k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]
-            }
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]}
         else:
             # MBIS accepts maxiter, threshold, agspec
-            filtered_kwargs = {
-                k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]
-            }
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]}
 
         scheme_class = cls._schemes[scheme_name]
         result = scheme_class(**filtered_kwargs)
