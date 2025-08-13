@@ -1,0 +1,528 @@
+"""Atomic partitioning schemes for XDM calculations with comprehensive type hints."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union, Any
+from abc import ABC, abstractmethod
+
+from ..grids import CustomGrid
+
+if TYPE_CHECKING:
+    pass
+
+
+class PartitioningScheme(ABC):
+    """
+    Abstract base class for atomic partitioning schemes.
+
+    This class defines the interface for all partitioning schemes used in XDM
+    calculations. Subclasses must implement the compute_weights method to
+    perform the actual partitioning calculation.
+
+    Attributes
+    ----------
+    _partition_obj : Optional[Any]
+        Internal partition object storing computed weights and metadata
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize the partitioning scheme.
+
+        Returns
+        -------
+        None
+        """
+        self._partition_obj: Optional[Any] = None
+
+    @abstractmethod
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """
+        Compute partition object for the given molecule and grid.
+
+        This method creates the partition object and performs the partitioning calculation.
+        Weights are later loaded directly from the partition object's cache during
+        grid projection.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing basis set and geometry information
+        grid : Union[CustomGrid, Any]
+            Integration grid for partitioning calculations
+
+        Returns
+        -------
+        None
+        """
+        pass
+
+    def get_partition_object(self) -> Optional[Any]:
+        """
+        Get the underlying partition object for grid projection.
+
+        Returns
+        -------
+        Optional[Any]
+            The computed partition object if available, None otherwise
+        """
+        return self._partition_obj
+
+
+class BeckePartitioning(PartitioningScheme):
+    """
+    Becke partitioning scheme.
+
+    Uses Becke's fuzzy atom approach with smooth cutoff functions
+    to partition molecular electron density into atomic contributions.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize Becke partitioning.
+
+        Returns
+        -------
+        None
+        """
+        super().__init__()
+
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """
+        Create Becke partition object for grid projection.
+
+        This method creates a Horton Becke partition object that computes
+        atomic weights using Becke's fuzzy atom partitioning scheme.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing coordinates and atomic numbers
+        grid : Union[CustomGrid, Any]
+            Integration grid used for partitioning calculations
+
+        Returns
+        -------
+        None
+        """
+        from horton.part import BeckeWPart
+
+        # Use the provided grid directly - no need to create a new one
+        horton_grid = grid
+
+        # Compute total density
+        dm_full = mol.get_dm_full()
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, horton_grid.points)
+
+        # Create Becke partition object
+        becke = BeckeWPart(
+            mol.coordinates,
+            mol.numbers,
+            mol.pseudo_numbers,
+            horton_grid,
+            rho_total,
+            local=False,
+        )
+        becke.do_all()
+
+        # Store partition object for grid projection
+        self._partition_obj = becke
+
+
+class HirshfeldPartitioning(PartitioningScheme):
+    """
+    Hirshfeld partitioning scheme.
+
+    Uses reference atomic densities to define partitioning weights
+    based on the ratio of atomic to molecular density contributions.
+    """
+
+    def __init__(self, proatom_db: Optional[str] = None) -> None:
+        """
+        Initialize Hirshfeld partitioning.
+
+        Parameters
+        ----------
+        proatom_db : Optional[str], default=None
+            Path to pro-atom database. If None, uses default database.
+
+        Returns
+        -------
+        None
+        """
+        super().__init__()
+        self.proatom_db = proatom_db
+
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """
+        Create Hirshfeld partition object for grid projection.
+
+        This method creates a Horton Hirshfeld partition object that computes
+        atomic weights using reference atomic densities.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing coordinates, atomic numbers, and density matrix
+        grid : Union[CustomGrid, Any]
+            Integration grid used for partitioning calculations
+
+        Returns
+        -------
+        None
+        """
+        from horton.part import HirshfeldWPart
+        from horton.part.proatomdb import ProAtomDB
+
+        if self.proatom_db is None:
+            raise ValueError(
+                "Hirshfeld partitioning requires proatom_db path. Use --proatomdb argument."
+            )
+
+        # Use the provided grid directly - no need to create a new one
+        horton_grid = grid
+
+        # Load proatom database
+        proatomdb = ProAtomDB.from_file(self.proatom_db)
+
+        # Compute total density
+        dm_full = mol.get_dm_full()
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, horton_grid.points)
+
+        # Create Hirshfeld partition object
+        hirshfeld = HirshfeldWPart(
+            mol.coordinates,
+            mol.numbers,
+            mol.pseudo_numbers,
+            horton_grid,
+            rho_total,
+            proatomdb,
+            local=False,
+        )
+        hirshfeld.do_all()
+
+        # Store partition object for grid projection
+        self._partition_obj = hirshfeld
+
+
+class HirshfeldIPartitioning(PartitioningScheme):
+    """
+    Hirshfeld-I (Iterative) partitioning scheme.
+
+    Iterative version of Hirshfeld partitioning that self-consistently
+    updates reference atomic densities based on computed atomic charges.
+    """
+
+    def __init__(
+        self,
+        proatom_db: Optional[str] = None,
+        maxiter: int = 500,
+        threshold: float = 1e-6,
+    ) -> None:
+        """
+        Initialize Hirshfeld-I partitioning.
+
+        Parameters
+        ----------
+        proatom_db : Optional[str], default=None
+            Path to pro-atom database. If None, uses default database.
+        maxiter : int, default=500
+            Maximum number of iterations for convergence
+        threshold : float, default=1e-6
+            Convergence threshold for iterative process
+
+        Returns
+        -------
+        None
+        """
+        super().__init__()
+        self.proatom_db = proatom_db
+        self.maxiter = maxiter
+        self.threshold = threshold
+
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """
+        Create Hirshfeld-I partition object for grid projection.
+
+        This method creates a Horton Hirshfeld-I partition object that computes
+        atomic weights using iteratively refined reference atomic densities.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing coordinates, atomic numbers, and density matrix
+        grid : Union[CustomGrid, Any]
+            Integration grid used for partitioning calculations
+        """
+        from horton.part import HirshfeldIWPart
+        from horton.part.proatomdb import ProAtomDB
+
+        if self.proatom_db is None:
+            raise ValueError(
+                "Hirshfeld-I partitioning requires proatom_db path. Use --proatomdb argument."
+            )
+
+        # Use the provided grid directly - no need to create a new one
+        horton_grid = grid
+
+        # Load proatom database
+        proatomdb = ProAtomDB.from_file(self.proatom_db)
+
+        # Compute total density
+        dm_full = mol.get_dm_full()
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, horton_grid.points)
+
+        # Create Hirshfeld-I partition object
+        hirshfeld_i = HirshfeldIWPart(
+            mol.coordinates,
+            mol.numbers,
+            mol.pseudo_numbers,
+            horton_grid,
+            rho_total,
+            proatomdb,
+            local=False,
+            maxiter=self.maxiter,
+            threshold=self.threshold,
+        )
+        hirshfeld_i.do_all()
+
+        # Store partition object for grid projection
+        self._partition_obj = hirshfeld_i
+
+
+class IterativeStockholderPartitioning(PartitioningScheme):
+    """
+    Iterative Stockholder (IS) partitioning scheme.
+
+    The Iterative Stockholder partitioning scheme is an iterative extension
+    of Hirshfeld partitioning that aims to reduce the dependence on pro-atoms.
+    It iteratively updates the pro-atom densities using the current atomic
+    populations until convergence.
+
+    This is a local partitioning scheme that creates atomic subgrids for
+    improved computational efficiency.
+
+    Attributes
+    ----------
+    maxiter : int
+        Maximum number of iterations for convergence
+    threshold : float
+        Convergence threshold for density changes
+    """
+
+    def __init__(
+        self,
+        maxiter: int = 500,
+        threshold: float = 1e-6,
+    ) -> None:
+        """
+        Initialize Iterative Stockholder partitioning.
+
+        Parameters
+        ----------
+        maxiter : int, default=500
+            Maximum number of iterations for self-consistent procedure
+        threshold : float, default=1e-6
+            Convergence threshold for density changes between iterations
+        """
+        super().__init__()
+        self.maxiter = maxiter
+        self.threshold = threshold
+
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """
+        Compute Iterative Stockholder atomic weights.
+
+        This method creates an IterativeStockholderWPart object and performs
+        the iterative partitioning calculation on the provided grid.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing basis set and geometry information
+        grid : Union[CustomGrid, Any]
+            Integration grid for partitioning calculations
+        """
+        try:
+            from horton.part import IterativeStockholderWPart
+        except ImportError:
+            raise ImportError(
+                "Horton library is required for Iterative Stockholder partitioning"
+            )
+
+        # Compute total density on the grid
+        dm_full = mol.get_dm_full()
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
+
+        # Create Iterative Stockholder partition object
+        iterstock = IterativeStockholderWPart(
+            mol.coordinates,
+            mol.numbers,
+            mol.pseudo_numbers,
+            grid,
+            rho_total,
+            maxiter=self.maxiter,
+            threshold=self.threshold,
+        )
+        iterstock.do_all()
+        iterstock.update_at_weights()
+
+        # Store partition object for grid projection
+        self._partition_obj = iterstock
+
+
+class MBISPartitioning(PartitioningScheme):
+    """
+    MBIS (Minimal Basis Iterative Stockholder) partitioning.
+
+    MBIS uses iterative refinement to achieve self-consistent partitioning
+    based on minimal basis set approximations of atomic densities.
+    """
+
+    def __init__(self, maxiter: int = 500, threshold: float = 1e-6) -> None:
+        """Initialize MBIS partitioning.
+
+        Parameters
+        ----------
+        maxiter : int, default=500
+            Maximum number of iterations for convergence
+        threshold : float, default=1e-6
+            Convergence threshold for iterative process
+        """
+        super().__init__()
+        self.maxiter = maxiter
+        self.threshold = threshold
+
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """Create MBIS partition object for grid projection.
+
+        This method creates a Horton MBIS partition object that computes
+        atomic weights using the Minimal Basis Iterative Stockholder approach.
+        The partition object is stored for later use in grid projection.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing coordinates, atomic numbers, and density matrix
+        grid : Union[CustomGrid, Any]
+            Target integration grid (not used directly by MBIS but kept for interface consistency)
+        """
+        from horton.part.mbis import MBISWPart
+
+        # Compute total density
+        dm_full = mol.get_dm_full()
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
+
+        # Create MBIS partition object
+        mbis = MBISWPart(
+            mol.coordinates,
+            mol.numbers,
+            mol.pseudo_numbers,
+            grid,
+            rho_total,
+            maxiter=self.maxiter,
+            threshold=self.threshold,
+        )
+        mbis.do_all()
+        mbis.update_at_weights()
+
+        # Store partition object for grid projection
+        self._partition_obj = mbis
+
+
+class PartitioningSchemeFactory:
+    """
+    Factory for creating partitioning schemes.
+
+    This factory provides a unified interface for creating different
+    partitioning schemes used in XDM calculations.
+    """
+
+    _schemes = {
+        "mbis": MBISPartitioning,
+        "becke": BeckePartitioning,
+        "hirshfeld": HirshfeldPartitioning,
+        "hirshfeld-i": HirshfeldIPartitioning,
+        "iterstock": IterativeStockholderPartitioning,
+        "iterative-stockholder": IterativeStockholderPartitioning,
+        "is": IterativeStockholderPartitioning,
+    }
+
+    @classmethod
+    def create_scheme(cls, scheme_name: str, **kwargs: Any) -> 'PartitioningScheme':
+        """
+        Create a partitioning scheme.
+
+        Parameters
+        ----------
+        scheme_name : str
+            Name of the partitioning scheme to create.
+            Available schemes: 'mbis', 'becke', 'hirshfeld', 'hirshfeld-i',
+            'iterstock', 'iterative-stockholder', 'is'
+        **kwargs
+            Additional keyword arguments passed to the scheme constructor.
+            Different schemes accept different parameters:
+            - mbis: maxiter, threshold, agspec
+            - becke: (no parameters)
+            - hirshfeld: proatom_db
+            - hirshfeld-i: proatom_db, maxiter, threshold
+            - iterstock/iterative-stockholder/is: maxiter, threshold
+
+        Returns
+        -------
+        PartitioningScheme
+            Instance of the requested partitioning scheme
+
+        Raises
+        ------
+        ValueError
+            If scheme_name is not recognized
+        """
+        if scheme_name not in cls._schemes:
+            available = ", ".join(cls._schemes.keys())
+            raise ValueError(
+                f"Unknown partitioning scheme '{scheme_name}'. Available: {available}"
+            )
+
+        # Filter kwargs based on scheme requirements
+        if scheme_name in ["becke"]:
+            # Becke doesn't accept any special parameters
+            filtered_kwargs = {}
+        elif scheme_name in ["hirshfeld"]:
+            # Hirshfeld only accepts 'proatom_db'
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["proatom_db"]}
+        elif scheme_name in ["hirshfeld-i"]:
+            # Hirshfeld-I accepts proatom_db, maxiter, threshold
+            filtered_kwargs = {
+                k: v
+                for k, v in kwargs.items()
+                if k in ["proatom_db", "maxiter", "threshold"]
+            }
+        elif scheme_name in ["iterstock", "iterative-stockholder", "is"]:
+            # Iterative Stockholder accepts maxiter, threshold
+            filtered_kwargs = {
+                k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]
+            }
+        else:
+            # MBIS accepts maxiter, threshold, agspec
+            filtered_kwargs = {
+                k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]
+            }
+
+        scheme_class = cls._schemes[scheme_name]
+        result = scheme_class(**filtered_kwargs)
+        if not isinstance(result, PartitioningScheme):
+            raise TypeError("Returned object is not a PartitioningScheme")
+        return result
+
+    @classmethod
+    def available_schemes(cls) -> list[str]:
+        """
+        Return list of available partitioning schemes.
+
+        Returns
+        -------
+        List[str]
+            List of available scheme names that can be used with create_scheme()
+        """
+        return list(cls._schemes.keys())

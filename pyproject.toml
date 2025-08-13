@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyxdm"
+version = "0.1.0"
+description = "XDM multipole moment calculations with multiple partitioning schemes"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "João Morado", email = "joao@example.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "pre-commit",
+]
+
+[project.scripts]
+pyxdm = "pyxdm.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jmorado/pyxdm"
+Repository = "https://github.com/jmorado/pyxdm"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pyxdm*"]
+
+[tool.ruff]
+fix = true
+line-length = 144
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E203", "I001"]  # keep for compatibility
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyxdm"]
+combine-as-imports = true
+force-single-line = false
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
