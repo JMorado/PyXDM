@@ -8,6 +8,7 @@ from .partitioning import PartitioningSchemeFactory
 from .utils.formatting import log_mol_info, log_table, log_boxed_title, log_charges_populations, get_atomic_symbol
 import logging
 import numpy as np
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,22 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mesh", help="Optional postg mesh file")
 
     parser.add_argument(
+        "--xdm-moments",
+        type=int,
+        nargs="+",
+        default=[1, 2, 3],
+        help="Order(s) of multipole moments to calculate (default: 1, 2, 3)",
+    )
+
+    parser.add_argument(
+        "--radial-moments",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Order(s) of radial moments to calculate (default: none)",
+    )
+
+    parser.add_argument(
         "--scheme",
         default=None,
         choices=PartitioningSchemeFactory.available_schemes(),
@@ -40,6 +57,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--proatomdb",
         help="Path to proatom database file (required for Hirshfeld schemes)",
+    )
+
+    parser.add_argument(
+        "--aniso",
+        action="store_true",
+        help="Calculate anisotropic multipole moments (default: False)",
     )
 
     return parser
@@ -55,6 +78,7 @@ def main() -> None:
     -------
     None
     """
+    initial_time = time.time()
     parser: argparse.ArgumentParser = create_argument_parser()
     args = parser.parse_args()
 
@@ -76,18 +100,18 @@ def main() -> None:
 
         if session.partitions is not None:
             for scheme, partition_obj in session.partitions.items():
+                assert partition_obj is not None, f"Partition object for {scheme} is None"
+                assert session.calculator is not None, "Calculator must be set up before calculating moments"
                 log_boxed_title(f"AIM Scheme: {scheme.upper()}", logger=logger)
                 log_charges_populations(session, partition_obj, logger)
 
                 # Compute partitions if needed
-                if session.calculator is not None:
-                    atomic_results = session.calculator.calculate_moments(
-                        partition_obj=partition_obj,
-                        grid=session.grid,
-                        multipole_orders=[1, 2, 3],
-                    )
-                else:
-                    logger.error("No calculator available for session.")
+                atomic_results, tensor_results = session.calculator.calculate_xdm_moments(
+                    partition_obj=partition_obj,
+                    grid=session.grid,
+                    order=args.xdm_moments,
+                    anisotropic=args.aniso,
+                )
 
                 # Log atomic data
                 atomic_data = {}
@@ -96,11 +120,52 @@ def main() -> None:
 
                 log_table(
                     logger,
-                    columns=["<M1^2>", "<M2^2>", "<M3^2>"],
+                    columns=[key for key in atomic_data],
                     rows=at_symbols + ["Σ_atoms"],
                     data=np.column_stack([atomic_data[key] for key in atomic_data]),
                 )
 
+                if args.aniso:
+                    moment_keys = [key.split("_")[0] for key in tensor_results]
+                    geom_factors_data = {key: np.zeros(len(at_symbols)) for key in moment_keys}
+
+                    for key in tensor_results:
+                        moment_key = key.split("_")[0]
+                        for i, tensor in enumerate(tensor_results[key]):
+                            logger.info(f"Atom {i} ({at_symbols[i]}) {moment_key} tensor:")
+                            log_table(
+                                logger,
+                                columns=["x", "y", "z"],
+                                rows=["x", "y", "z"],
+                                data=tensor,
+                            )
+                            f_geom = session.calculator.geom_factor(tensor)
+                            geom_factors_data[moment_key][i] = f_geom
+
+                    logger.info("Summary of Geometric Anisotropy Factors (f_geom):")
+                    log_table(
+                        logger,
+                        columns=[f"f({key})" for key in moment_keys],
+                        rows=at_symbols,
+                        data=np.column_stack(list(geom_factors_data.values())),
+                    )
+
+                if args.radial_moments:
+                    # Compute radial moments
+                    radial_moments = session.calculator.calculate_radial_moments(
+                        partition_obj=partition_obj,
+                        order=args.radial_moments,
+                    )
+
+                    log_table(
+                        logger,
+                        columns=[key for key in radial_moments],
+                        rows=at_symbols,
+                        data=np.column_stack([radial_moments[key] for key in radial_moments]),
+                    )
+
+        wall_time = time.time() - initial_time
+        logger.info(f"Total wall time: {wall_time:.2f} seconds")
         log_boxed_title("PyXDM terminated successfully! :)", logger=logger)
 
     except Exception as e:
