@@ -30,7 +30,7 @@ def write_h5_output(filename: str, session, all_results: Dict[str, Any], wall_ti
     with h5py.File(filename, 'w') as f:
         # Write metadata
         metadata = f.create_group('metadata')
-        metadata.attrs['pyxdm_version'] = '0.1.0'
+        metadata.attrs['pyxdm_version'] = '0.1.1'
         metadata.attrs['calculation_time'] = wall_time
         metadata.attrs['wavefunction_file'] = str(session.wfn_file)
         
