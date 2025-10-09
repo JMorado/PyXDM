@@ -2,10 +2,12 @@
 
 import argparse
 import sys
+from pathlib import Path
 
 from .core import XDMSession
 from .partitioning import PartitioningSchemeFactory
 from .utils.formatting import log_mol_info, log_table, log_boxed_title, log_charges_populations, get_atomic_symbol
+from .utils.io import write_h5_output
 import logging
 import numpy as np
 import time
@@ -65,7 +67,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="Calculate anisotropic multipole moments (default: False)",
     )
 
+    parser.add_argument(
+        "--output",
+        "-o",
+        default=None,
+        help="Output HDF5 file to save calculated data (default: <input_basename>.h5)",
+    )
+
     return parser
+
 
 
 def main() -> None:
@@ -98,12 +108,25 @@ def main() -> None:
         # Log loaded molecule information
         log_mol_info(session.mol)
 
+        # Dictionary to store all results for HDF5 output
+        all_results = {}
+
         if session.partitions is not None:
             for scheme, partition_obj in session.partitions.items():
                 assert partition_obj is not None, f"Partition object for {scheme} is None"
                 assert session.calculator is not None, "Calculator must be set up before calculating moments"
                 log_boxed_title(f"AIM Scheme: {scheme.upper()}", logger=logger)
                 log_charges_populations(session, partition_obj, logger)
+
+                # Initialize results storage for this scheme
+                scheme_results = {}
+
+                # Get the partitioning scheme object to compute charges and populations
+                partitioning_scheme = session.partition_schemes[scheme]
+                
+                # Store charges and populations
+                scheme_results['charges'] = partitioning_scheme.get_charges(session.mol, session.calculator.dm_full)
+                scheme_results['populations'] = partitioning_scheme.get_populations(session.mol, session.calculator.dm_full)
 
                 # Compute partitions if needed
                 atomic_results, tensor_results = session.calculator.calculate_xdm_moments(
@@ -112,6 +135,9 @@ def main() -> None:
                     order=args.xdm_moments,
                     anisotropic=args.aniso,
                 )
+
+                # Store atomic results
+                scheme_results['atomic_results'] = atomic_results
 
                 # Log atomic data
                 atomic_data = {}
@@ -129,6 +155,9 @@ def main() -> None:
                     moment_keys = [key.split("_")[0] for key in tensor_results]
                     geom_factors_data = {key: np.zeros(len(at_symbols)) for key in moment_keys}
 
+                    # Store tensor results
+                    scheme_results['tensor_results'] = tensor_results
+
                     for key in tensor_results:
                         moment_key = key.split("_")[0]
                         for i, tensor in enumerate(tensor_results[key]):
@@ -141,6 +170,9 @@ def main() -> None:
                             )
                             f_geom = session.calculator.geom_factor(tensor)
                             geom_factors_data[moment_key][i] = f_geom
+
+                    # Store geometric factors
+                    scheme_results['geom_factors'] = geom_factors_data
 
                     logger.info("Summary of Geometric Anisotropy Factors (f_geom):")
                     log_table(
@@ -157,6 +189,9 @@ def main() -> None:
                         order=args.radial_moments,
                     )
 
+                    # Store radial moments
+                    scheme_results['radial_moments'] = radial_moments
+
                     log_table(
                         logger,
                         columns=[key for key in radial_moments],
@@ -164,8 +199,24 @@ def main() -> None:
                         data=np.column_stack([radial_moments[key] for key in radial_moments]),
                     )
 
+                # Store all results for this scheme
+                all_results[scheme] = scheme_results
+
         wall_time = time.time() - initial_time
         logger.info(f"Total wall time: {wall_time:.2f} seconds")
+
+        # Write results to HDF5 file if requested or by default
+        if args.output or all_results:  # Write if output specified or if we have results
+            if args.output:
+                output_file = args.output
+            else:
+                # Generate default filename from input file
+                input_path = Path(args.wfn_file)
+                output_file = input_path.with_suffix('pyxdm.h5').name
+            
+            if all_results:  # Only write if we have calculation results
+                write_h5_output(output_file, session, all_results, wall_time)
+
         log_boxed_title("PyXDM terminated successfully! :)", logger=logger)
 
     except Exception as e:

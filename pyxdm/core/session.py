@@ -57,6 +57,7 @@ class XDMSession:
         self.grid = None
         self.calculator = None
         self.partitions: dict[str, object] = {}
+        self.partition_schemes: dict[str, object] = {}
 
     def load_molecule(self) -> None:
         """
@@ -139,6 +140,7 @@ class XDMSession:
             Dictionary of partition objects.
         """
         self.partitions = {}
+        self.partition_schemes = {}  # Store the partitioning scheme objects
 
         for scheme in schemes:
             try:
@@ -154,6 +156,7 @@ class XDMSession:
                 partition_obj = partitioning.get_partition_object()
                 if partition_obj is not None:
                     self.partitions[scheme] = partition_obj
+                    self.partition_schemes[scheme] = partitioning  # Store the scheme object too
                 else:
                     logger.warning(f"No partition object available for {scheme}")
 

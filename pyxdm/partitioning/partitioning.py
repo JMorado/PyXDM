@@ -68,6 +68,65 @@ class PartitioningScheme(ABC):
         """
         return self._partition_obj
 
+    def get_charges(self, mol: Any, dm_full: Any) -> list[float]:
+        """
+        Compute atomic charges from the partition object.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing atomic numbers and basis information
+        dm_full : Any
+            Full density matrix
+
+        Returns
+        -------
+        list[float]
+            List of atomic charges in electrons
+        """
+        if self._partition_obj is None:
+            raise ValueError("Partition object not computed. Run compute_weights first.")
+        
+        charges = []
+        for i in range(mol.natom):
+            subgrid = self._partition_obj.get_grid(i)
+            weights_i = self._partition_obj.cache.load("at_weights", i)
+            rho_subgrid = mol.obasis.compute_grid_density_dm(dm_full, subgrid.points)
+            population = subgrid.integrate(weights_i * rho_subgrid)
+            charge = mol.numbers[i] - population
+            charges.append(float(charge))
+        
+        return charges
+
+    def get_populations(self, mol: Any, dm_full: Any) -> list[float]:
+        """
+        Compute atomic populations from the partition object.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object containing atomic numbers and basis information
+        dm_full : Any
+            Full density matrix
+
+        Returns
+        -------
+        list[float]
+            List of atomic populations in electrons
+        """
+        if self._partition_obj is None:
+            raise ValueError("Partition object not computed. Run compute_weights first.")
+        
+        populations = []
+        for i in range(mol.natom):
+            subgrid = self._partition_obj.get_grid(i)
+            weights_i = self._partition_obj.cache.load("at_weights", i)
+            rho_subgrid = mol.obasis.compute_grid_density_dm(dm_full, subgrid.points)
+            population = subgrid.integrate(weights_i * rho_subgrid)
+            populations.append(float(population))
+        
+        return populations
+
 
 class BeckePartitioning(PartitioningScheme):
     """
