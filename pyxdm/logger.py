@@ -1,5 +1,7 @@
 """Logging configuration for the PyXDM package."""
 
+from typing import Any
+
 import logging
 import logging.config
 import os
@@ -17,30 +19,30 @@ try:
             if self._level >= self.warning:
                 super().__call__(*a, **k)
 
-        def warn(self, *a, **k):
+        def warn(self, *a: Any, **k: Any) -> None:
             super().warn(*a, **k)
 
-        def hline(self, *a, **k):
+        def hline(self, *a: Any, **k: Any) -> None:
             pass
 
-        def center(self, *a, **k):
+        def center(self, *a: Any, **k: Any) -> None:
             pass
 
-        def blank(self, *a, **k):
+        def blank(self, *a: Any, **k: Any) -> None:
             pass
 
-        def deflist(self, *a, **k):
+        def deflist(self, *a: Any, **k: Any) -> None:
             pass
 
-        def progress(self, *a, **k):
+        def progress(self, *a: Any, **k: Any) -> None:
             if self._level == self.medium:
                 return super().progress(*a, **k)
             return lambda *aa, **kk: None
 
-        def print_header(self, *a, **k):
+        def print_header(self, *a: Any, **k: Any) -> None:
             pass
 
-        def print_footer(self, *a, **k):
+        def print_footer(self, *a: Any, **k: Any) -> None:
             pass
 
     ht.log.__class__ = SelectiveScreenLog

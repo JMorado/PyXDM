@@ -70,7 +70,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         "-o",
-        default="None",
+        default=None,
         help="Output HDF5 file to save calculated data (default: <input_basename>.h5)",
     )
 
@@ -210,10 +210,9 @@ def main() -> None:
             if args.output:
                 output_file = args.output
             else:
-                # Generate default filename from input file
-                input_path = Path(args.wfn_file) / '_pyxdm'
+                input_path = Path(args.wfn_file + ".pyxdm") 
                 output_file = input_path.with_suffix('.h5')
-            if all_results:  # Only write if we have calculation results
+            if all_results:  
                 write_h5_output(output_file, session, all_results, wall_time)
 
         log_boxed_title("PyXDM terminated successfully! :)", logger=logger)

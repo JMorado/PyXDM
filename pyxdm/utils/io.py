@@ -3,7 +3,6 @@
 import logging
 import numpy as np
 import h5py
-from pathlib import Path
 from typing import Dict, Any
 
 from .formatting import get_atomic_symbol
