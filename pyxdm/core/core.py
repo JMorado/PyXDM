@@ -135,7 +135,7 @@ class XDMCalculator:
 
             return lambda_iso, lambda_tensor
 
-    def calculate_xdm_moments(self, partition_obj: Any, grid: Any, order: Union[List[int], int], anisotropic: bool = True) -> dict:
+    def calculate_xdm_moments(self, partition_obj: Any, grid: Any, order: Union[List[int], int], anisotropic: bool = False) -> dict:
         """Calculate XDM multipole moments for all atoms."""
         logger.debug("Calculating XDM multipole moments for all atoms...")
         order = order if isinstance(order, list) else [order]

@@ -6,11 +6,12 @@ import h5py
 from typing import Dict, Any
 
 from .formatting import get_atomic_symbol
+from .. import __version__
 
 logger = logging.getLogger(__name__)
 
 
-def write_h5_output(filename: str, session, all_results: Dict[str, Any], wall_time: float) -> None:
+def write_h5_output(filename: str, session, all_results: Dict[str, Any]) -> None:
     """
     Write calculated data to HDF5 file.
 
@@ -22,16 +23,13 @@ def write_h5_output(filename: str, session, all_results: Dict[str, Any], wall_ti
         XDM session containing molecule and calculation data
     all_results : dict
         Dictionary containing all calculated results by scheme
-    wall_time : float
-        Total calculation wall time in seconds
     """
     logger.info(f"Writing results to {filename}")
     
     with h5py.File(filename, 'w') as f:
         # Write metadata
         metadata = f.create_group('metadata')
-        metadata.attrs['pyxdm_version'] = '0.1.1'
-        metadata.attrs['calculation_time'] = wall_time
+        metadata.attrs['pyxdm_version'] = __version__
         metadata.attrs['wavefunction_file'] = str(session.wfn_file)
         
         # Write molecular information
