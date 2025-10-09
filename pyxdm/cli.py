@@ -213,7 +213,7 @@ def main() -> None:
                 input_path = Path(args.wfn_file + ".pyxdm") 
                 output_file = input_path.with_suffix('.h5')
             if all_results:  
-                write_h5_output(output_file, session, all_results, wall_time)
+                write_h5_output(output_file, session, all_results)
 
         log_boxed_title("PyXDM terminated successfully! :)", logger=logger)
 
