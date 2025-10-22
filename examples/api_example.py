@@ -5,9 +5,9 @@ session = XDMSession('water/orca.molden.input')
 session.load_molecule()
 session.setup_grid()
 session.setup_calculator()
-session.setup_partition_schemes(['mbis'])
-xdm_results, _ = session.calculator.calculate_xdm_moments(
-    partition_obj=session.partitions['mbis'],
+session.setup_partition_schemes(['becke'])
+xdm_results = session.calculator.calculate_xdm_moments(
+    partition_obj=session.partitions['becke'],
     grid=session.grid,
     order=[1, 2, 3],
     anisotropic=False,

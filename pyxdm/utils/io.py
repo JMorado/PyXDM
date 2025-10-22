@@ -11,7 +11,48 @@ from .. import __version__
 logger = logging.getLogger(__name__)
 
 
-def write_h5_output(filename: str, session, all_results: Dict[str, Any]) -> None:
+def dump_to_h5(grp: str, data: Any) -> None:
+    """
+    Dump a dictionary or Horton object to an HDF5 file.
+
+    Notes
+    -----
+    Adapted from: https://github.com/theochem/horton/blob/master/horton/io/internal.py#L31-L63
+
+    grp
+        A HDF5 group or a filename of a new HDF5 file.
+
+    data
+        The object to be written. This can be a dictionary of objects or
+        an instance of a HORTON class that has a ``to_hdf5`` method. The
+        dictionary my contain numpy arrays
+    """
+    if isinstance(grp, str):
+        with h5py.File(grp, 'w') as f:
+            dump_to_h5(f, data)
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            # Simply overwrite old data
+            if key in grp:
+                del grp[key]
+            if isinstance(value, int) or isinstance(value, float) or isinstance(value, np.ndarray) or isinstance(value, str):
+                grp[key] = value
+            else:
+                subgrp = grp.require_group(key)
+                dump_to_h5(subgrp, value)
+    else:
+        # clear the group if anything was present
+        for key in list(grp.keys()):
+            del grp[key]
+        for key in list(grp.attrs.keys()):
+            del grp.attrs[key]
+        data.to_hdf5(grp)
+        # The following is needed to create object of the right type when
+        # reading from the checkpoint:
+        grp.attrs['class'] = data.__class__.__name__
+
+
+def write_h5_output(filename: str, session, xdm_results: Dict[str, Any], write_horton: bool = True) -> None:
     """
     Write calculated data to HDF5 file.
 
@@ -21,9 +62,26 @@ def write_h5_output(filename: str, session, all_results: Dict[str, Any]) -> None
         Output HDF5 filename
     session : XDMSession
         XDM session containing molecule and calculation data
-    all_results : dict
+    xdm_results : dict
         Dictionary containing all calculated results by scheme
+    write_horton
+        Whether to attempt to write the Horton partitioning results.
     """
+    def get_horton_results(part, keys):
+        results = {}
+        for key in keys:
+            if isinstance(key, str):
+                results[key] = part[key]
+            elif isinstance(key, tuple):
+                assert len(key) == 2
+                index = key[1]
+                assert isinstance(index, int)
+                assert index >= 0
+                assert index < part.natom
+                atom_results = results.setdefault('atom_%05i' % index, {})
+                atom_results[key[0]] = part[key]
+        return results
+
     logger.info(f"Writing results to {filename}")
     
     with h5py.File(filename, 'w') as f:
@@ -39,8 +97,8 @@ def write_h5_output(filename: str, session, all_results: Dict[str, Any]) -> None
         
         # Calculate nelec from populations (sum of all atomic populations)
         nelec = None
-        if all_results:
-            first_scheme_results = next(iter(all_results.values()))
+        if xdm_results:
+            first_scheme_results = next(iter(xdm_results.values()))
             if 'populations' in first_scheme_results:
                 nelec = int(round(np.sum(first_scheme_results['populations'])))
         
@@ -56,35 +114,15 @@ def write_h5_output(filename: str, session, all_results: Dict[str, Any]) -> None
         molecule.create_dataset('atomic_symbols', data=symbols_str)
         
         # Write results for each partitioning scheme
-        for scheme_name, results_data in all_results.items():
-            scheme_group = f.create_group(f'results/{scheme_name}')
-            
-            # Write multipole moments
-            if 'atomic_results' in results_data:
-                multipole_group = scheme_group.create_group('multipole_moments')
-                for key, values in results_data['atomic_results'].items():
-                    multipole_group.create_dataset(key, data=values)
-            
-            # Write tensor multipole moments (anisotropic moments)
-            if 'tensor_results' in results_data:
-                tensor_group = scheme_group.create_group('multipole_moments_tensor')
-                for key, tensors in results_data['tensor_results'].items():
-                    tensor_group.create_dataset(key, data=np.array(tensors))
-            
-            # Write geometric factors
-            if 'geom_factors' in results_data:
-                geom_group = scheme_group.create_group('geometric_factors')
-                for key, values in results_data['geom_factors'].items():
-                    geom_group.create_dataset(f'f_{key}', data=values)
-            
-            # Write radial moments
-            if 'radial_moments' in results_data:
-                radial_group = scheme_group.create_group('radial_moments')
-                for key, values in results_data['radial_moments'].items():
-                    radial_group.create_dataset(key, data=values)
-            
-            # Write charges and populations if available
-            if 'charges' in results_data:
-                scheme_group.create_dataset('charges', data=results_data['charges'])
-            if 'populations' in results_data:
-                scheme_group.create_dataset('populations', data=results_data['populations'])
+        for scheme_name, results_data in xdm_results.items():
+            scheme_group = f.create_group(f'{scheme_name}')
+
+            # Write PyXDM-calculated results
+            xdm_group = scheme_group.create_group('xdm')
+            dump_to_h5(xdm_group, results_data)
+
+            # Write Horton data
+            if write_horton:
+                horton_group = scheme_group.create_group('horton')
+                horton_data = get_horton_results(session.partitions[scheme_name], session.partitions[scheme_name].cache.keys())
+                dump_to_h5(horton_group, horton_data)

@@ -95,8 +95,8 @@ class PartitioningScheme(ABC):
             population = subgrid.integrate(weights_i * rho_subgrid)
             charge = mol.numbers[i] - population
             charges.append(float(charge))
-        
-        return charges
+
+        return {self._partition_obj.name: {"charges": charges}}
 
     def get_populations(self, mol: Any, dm_full: Any) -> list[float]:
         """
@@ -124,8 +124,8 @@ class PartitioningScheme(ABC):
             rho_subgrid = mol.obasis.compute_grid_density_dm(dm_full, subgrid.points)
             population = subgrid.integrate(weights_i * rho_subgrid)
             populations.append(float(population))
-        
-        return populations
+
+        return {self._partition_obj.name: {"populations": populations}}
 
 
 class BeckePartitioning(PartitioningScheme):
@@ -135,6 +135,7 @@ class BeckePartitioning(PartitioningScheme):
     Uses Becke's fuzzy atom approach with smooth cutoff functions
     to partition molecular electron density into atomic contributions.
     """
+    NAME : str = "becke"
 
     def __init__(self) -> None:
         """
@@ -186,7 +187,7 @@ class BeckePartitioning(PartitioningScheme):
 
         # Store partition object for grid projection
         self._partition_obj = becke
-
+        self._partition_obj.name = self.NAME
 
 class HirshfeldPartitioning(PartitioningScheme):
     """
@@ -195,6 +196,7 @@ class HirshfeldPartitioning(PartitioningScheme):
     Uses reference atomic densities to define partitioning weights
     based on the ratio of atomic to molecular density contributions.
     """
+    NAME : str= "hirshfeld"
 
     def __init__(self, proatom_db: Optional[str] = None) -> None:
         """
@@ -260,7 +262,7 @@ class HirshfeldPartitioning(PartitioningScheme):
 
         # Store partition object for grid projection
         self._partition_obj = hirshfeld
-
+        self._partition_obj.name = self.NAME
 
 class HirshfeldIPartitioning(PartitioningScheme):
     """
@@ -269,6 +271,7 @@ class HirshfeldIPartitioning(PartitioningScheme):
     Iterative version of Hirshfeld partitioning that self-consistently
     updates reference atomic densities based on computed atomic charges.
     """
+    NAME: str = "hirshfeld-i"
 
     def __init__(
         self,
@@ -343,7 +346,7 @@ class HirshfeldIPartitioning(PartitioningScheme):
 
         # Store partition object for grid projection
         self._partition_obj = hirshfeld_i
-
+        self._partition_obj.name = self.NAME
 
 class IterativeStockholderPartitioning(PartitioningScheme):
     """
@@ -364,6 +367,7 @@ class IterativeStockholderPartitioning(PartitioningScheme):
     threshold : float
         Convergence threshold for density changes
     """
+    NAME: str = "iterative-stockholder"
 
     def __init__(
         self,
@@ -422,7 +426,7 @@ class IterativeStockholderPartitioning(PartitioningScheme):
 
         # Store partition object for grid projection
         self._partition_obj = iterstock
-
+        self._partition_obj.name = self.NAME
 
 class MBISPartitioning(PartitioningScheme):
     """
@@ -431,6 +435,7 @@ class MBISPartitioning(PartitioningScheme):
     MBIS uses iterative refinement to achieve self-consistent partitioning
     based on minimal basis set approximations of atomic densities.
     """
+    NAME: str = "mbis"
 
     def __init__(self, maxiter: int = 500, threshold: float = 1e-6) -> None:
         """Initialize MBIS partitioning.
@@ -481,6 +486,7 @@ class MBISPartitioning(PartitioningScheme):
 
         # Store partition object for grid projection
         self._partition_obj = mbis
+        self._partition_obj.name = self.NAME
 
 
 class PartitioningSchemeFactory:
@@ -492,11 +498,11 @@ class PartitioningSchemeFactory:
     """
 
     _schemes = {
-        "mbis": MBISPartitioning,
-        "becke": BeckePartitioning,
-        "hirshfeld": HirshfeldPartitioning,
-        "hirshfeld-i": HirshfeldIPartitioning,
-        "iterative-stockholder": IterativeStockholderPartitioning,
+        MBISPartitioning.NAME: MBISPartitioning,
+        BeckePartitioning.NAME: BeckePartitioning,
+        HirshfeldPartitioning.NAME: HirshfeldPartitioning,
+        HirshfeldIPartitioning.NAME: HirshfeldIPartitioning,
+        IterativeStockholderPartitioning.NAME: IterativeStockholderPartitioning,
     }
 
     @classmethod
@@ -534,16 +540,16 @@ class PartitioningSchemeFactory:
             raise ValueError(f"Unknown partitioning scheme '{scheme_name}'. Available: {available}")
 
         # Filter kwargs based on scheme requirements
-        if scheme_name in ["becke"]:
+        if scheme_name in [BeckePartitioning.NAME]:
             # Becke doesn't accept any special parameters
             filtered_kwargs = {}
-        elif scheme_name in ["hirshfeld"]:
+        elif scheme_name in [HirshfeldPartitioning.NAME]:
             # Hirshfeld only accepts 'proatom_db'
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["proatom_db"]}
-        elif scheme_name in ["hirshfeld-i"]:
+        elif scheme_name in [HirshfeldIPartitioning.NAME]:
             # Hirshfeld-I accepts proatom_db, maxiter, threshold
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["proatom_db", "maxiter", "threshold"]}
-        elif scheme_name in ["iterstock", "iterative-stockholder", "is"]:
+        elif scheme_name in [IterativeStockholderPartitioning.NAME, "iterstock", "is"]:
             # Iterative Stockholder accepts maxiter, threshold
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["maxiter", "threshold"]}
         else:

@@ -140,8 +140,8 @@ class XDMCalculator:
         logger.debug("Calculating XDM multipole moments for all atoms...")
         order = order if isinstance(order, list) else [order]
         xdm_results = {f"<M{n}^2>": np.zeros(self.n_atoms) for n in order}
-        xdm_results_tensor = {f"<M{n}^2>_tensor": [None] * self.n_atoms for n in order}
-
+        xdm_results_tensor = {f"<M{n}^2>_tensor": np.full((self.n_atoms, *(3,3)), np.nan) for n in order}
+        
         for atom_idx in range(self.n_atoms):
             grid = partition_obj.get_grid(atom_idx)
             weights_i = partition_obj.cache.load("at_weights", atom_idx)
@@ -152,7 +152,7 @@ class XDMCalculator:
                 xdm_results[f"<M{o}^2>"][atom_idx] = iso
                 xdm_results_tensor[f"<M{o}^2>_tensor"][atom_idx] = tensor
 
-        return xdm_results, xdm_results_tensor
+        return {partition_obj.name: {"xdm_results": xdm_results, "xdm_results_tensor": xdm_results_tensor}}
 
     def calculate_radial_moments(self, partition_obj: Any, order: Union[List[int], int] = 3) -> dict:
         """Calculate radial moments <r^order> for all atoms."""
@@ -169,7 +169,7 @@ class XDMCalculator:
             for o in order:
                 moments_dict[f"<r^{o}>"][i] = subgrid.integrate(r**o * weights_i * rho_subgrid)
 
-        return moments_dict
+        return {partition_obj.name: {"radial_moments": moments_dict}}
 
     @staticmethod
     def geom_factor(tensor: np.ndarray) -> float:

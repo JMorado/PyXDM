@@ -52,7 +52,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--scheme",
         default=None,
-        choices=PartitioningSchemeFactory.available_schemes(),
+        type=lambda s: [x.strip() for x in s.split(",")],
         help="Partitioning scheme to use (default: calculate for all schemes)",
     )
 
@@ -98,8 +98,17 @@ def main() -> None:
         session.load_molecule()
         session.setup_grid(args.mesh)
         session.setup_calculator()
+
+        if args.scheme is not None:
+            for scheme in args.scheme:
+                if scheme not in PartitioningSchemeFactory.available_schemes():
+                    raise ValueError(f"Unknown partitioning scheme: {scheme}. "
+                                     f"Available schemes are: {PartitioningSchemeFactory.available_schemes()}")
+        else:
+            args.scheme = PartitioningSchemeFactory.available_schemes()
+
         session.setup_partition_schemes(
-            [args.scheme] if args.scheme else PartitioningSchemeFactory.available_schemes(),
+            args.scheme,
             proatomdb=args.proatomdb,
         )
 
@@ -125,11 +134,11 @@ def main() -> None:
                 partitioning_scheme = session.partition_schemes[scheme]
                 
                 # Store charges and populations
-                scheme_results['charges'] = partitioning_scheme.get_charges(session.mol, session.calculator.dm_full)
-                scheme_results['populations'] = partitioning_scheme.get_populations(session.mol, session.calculator.dm_full)
+                scheme_results.update(partitioning_scheme.get_charges(session.mol, session.calculator.dm_full))
+                scheme_results.update(partitioning_scheme.get_populations(session.mol, session.calculator.dm_full))
 
                 # Compute partitions if needed
-                atomic_results, tensor_results = session.calculator.calculate_xdm_moments(
+                xdm_results = session.calculator.calculate_xdm_moments(
                     partition_obj=partition_obj,
                     grid=session.grid,
                     order=args.xdm_moments,
@@ -137,8 +146,11 @@ def main() -> None:
                 )
 
                 # Store atomic results
-                scheme_results['atomic_results'] = atomic_results
-
+                scheme_results.update(xdm_results)
+              
+                atomic_results = xdm_results[scheme].get("xdm_results", {})
+                tensor_results = xdm_results[scheme].get("xdm_results_tensor", {})
+             
                 # Log atomic data
                 atomic_data = {}
                 for key in atomic_results:
@@ -156,7 +168,7 @@ def main() -> None:
                     geom_factors_data = {key: np.zeros(len(at_symbols)) for key in moment_keys}
 
                     # Store tensor results
-                    scheme_results['tensor_results'] = tensor_results
+                    scheme_results.update(tensor_results)
 
                     for key in tensor_results:
                         moment_key = key.split("_")[0]
@@ -172,7 +184,7 @@ def main() -> None:
                             geom_factors_data[moment_key][i] = f_geom
 
                     # Store geometric factors
-                    scheme_results['geom_factors'] = geom_factors_data
+                    scheme_results.update({"geom_factors": geom_factors_data})
 
                     logger.info("Summary of Geometric Anisotropy Factors (f_geom):")
                     log_table(
@@ -190,7 +202,7 @@ def main() -> None:
                     )
 
                     # Store radial moments
-                    scheme_results['radial_moments'] = radial_moments
+                    scheme_results.update(radial_moments)
 
                     log_table(
                         logger,
@@ -201,7 +213,7 @@ def main() -> None:
 
                 # Store all results for this scheme
                 all_results[scheme] = scheme_results
-
+              
         wall_time = time.time() - initial_time
         logger.info(f"Total wall time: {wall_time:.2f} seconds")
 
