@@ -73,7 +73,10 @@ def write_h5_output(filename: str, session, xdm_results: Dict[str, Any], write_h
             if isinstance(key, str):
                 results[key] = part[key]
             elif isinstance(key, tuple):
-                assert len(key) == 2
+                if len(key) > 2:
+                    # Skip lines such as ('isolated', -1, 0, 132516082542464) for hirshfeld-i
+                    continue
+                assert len(key) >= 2
                 index = key[1]
                 assert isinstance(index, int)
                 assert index >= 0
