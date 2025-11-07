@@ -3,7 +3,7 @@
 import sys
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from ..grids import load_mesh, CustomGrid
 from ..partitioning import PartitioningSchemeFactory
@@ -73,7 +73,7 @@ class XDMSession:
             logger.error(f"Error loading wavefunction file: {e}")
             sys.exit(1)
 
-    def setup_grid(self, mesh_file: Optional[str] = None) -> None:
+    def setup_grid(self, mesh_file: Optional[str] = None, grid_definition: Any = 'ultrafine') -> None:
         """
         Setup computational grid.
 
@@ -81,6 +81,10 @@ class XDMSession:
         ----------
         mesh_file : str, optional
             Path to custom mesh file, if None uses default Becke grid
+        grid_definition : Any, optional
+            Definition for the Becke grid (default is 'ultrafine'). 
+            See Horton documentation for valid options:
+            https://theochem.github.io/horton/2.0.1/lib/mod_horton_grid_atgrid.html?highlight=ultrafine#horton.grid.atgrid.AtomicGridSpec
 
         Returns
         -------
@@ -98,7 +102,7 @@ class XDMSession:
                 logger.error(f"Error loading mesh file: {e}")
                 sys.exit(1)
         else:
-            agspec = ht.AtomicGridSpec("ultrafine")
+            agspec = ht.AtomicGridSpec(grid_definition)
             self.grid = ht.BeckeMolGrid(
                 self.mol.coordinates,
                 self.mol.numbers,
