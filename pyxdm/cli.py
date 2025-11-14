@@ -62,6 +62,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--grid",
+        type=str,
+        default="fine",
+        help="Grid quality for numerical integration ('coarse', 'medium', 'fine', 'veryfine', 'ultrafine', 'insane')",
+    )
+
+    parser.add_argument(
         "--aniso",
         action="store_true",
         help="Calculate anisotropic multipole moments (default: False)",
@@ -96,7 +103,7 @@ def main() -> None:
         # Initialize session and load molecule
         session: XDMSession = XDMSession(args.wfn_file)
         session.load_molecule()
-        session.setup_grid(args.mesh)
+        session.setup_grid(args.mesh, grid_definition=args.grid)
         session.setup_calculator()
 
         if args.scheme is not None:
