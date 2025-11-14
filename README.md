@@ -36,19 +36,44 @@ pip install -e .[dev]
 After installation, use the `pyxdm` command:
 
 ```bash
-pyxdm <wfn_file> [--mesh <mesh_file>] [--scheme <scheme>] [--order <orders>] [--proatomdb <path>] [-v]
+pyxdm <wfn_file> [OPTIONS]
 ```
 
 #### Arguments
+
+##### Positional
 - `<wfn_file>`: Path to the wavefunction file (Molden, WFN, etc.)
-- `--mesh`: Optional custom mesh file for integration grid
-- `--scheme`: Partitioning scheme to use (default: all available)
-- `--proatomdb`: Path to proatom database (required for Hirshfeld schemes)
 
-#### Example
+##### Optional
+- `--mesh <file>`: Optional postg mesh file for integration grid
+- `--scheme <schemes>`: Partitioning scheme(s) to use, separated by comma. If not specified, all available schemes are calculated. Available schemes: `becke`, `hirshfeld`, `hirshfeld_i`, `is`, `mbis`
+- `--proatomdb <path>`: Path to proatom database file (required for Hirshfeld schemes)
+- `--grid <quality>`: Grid quality for numerical integration. Options: `coarse`, `medium`, `fine`, `veryfine`, `ultrafine`, `insane` (default: `fine`)
+- `--xdm-moments <orders>`: Order(s) of multipole moments to calculate (default: `1 2 3`)
+- `--radial-moments <orders>`: Order(s) of radial moments to calculate (default: none)
+- `--aniso`: Calculate anisotropic multipole moments (default: False)
+- `--output <file>`, `-o <file>`: Output HDF5 file to save calculated data (default: `<input_basename>.h5`)
 
+#### Examples
+
+Basic usage with MBIS scheme:
 ```bash
-pyxdm orca.molden.input --scheme mbis 
+pyxdm orca.molden.input --scheme mbis
+```
+
+Calculate multiple schemes with custom grid granularity:
+```bash
+pyxdm orca.molden.input --scheme mbis,becke --grid ultrafine
+```
+
+Calculate anisotropic moments with custom output:
+```bash
+pyxdm orca.molden.input --scheme hirshfeld --proatomdb proatomdb.h5 --aniso -o results.h5
+```
+
+Calculate specific multipole orders and radial moments:
+```bash
+pyxdm orca.molden.input --xdm-moments 1 2 --radial-moments 2 3 4
 ```
 
 ### Python API
