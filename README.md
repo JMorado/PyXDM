@@ -66,16 +66,6 @@ Calculate multiple schemes with custom grid granularity:
 pyxdm orca.molden.input --scheme mbis,becke --grid ultrafine
 ```
 
-Calculate anisotropic moments with custom output:
-```bash
-pyxdm orca.molden.input --scheme hirshfeld --proatomdb proatomdb.h5 --aniso -o results.h5
-```
-
-Calculate specific multipole orders and radial moments:
-```bash
-pyxdm orca.molden.input --xdm-moments 1 2 --radial-moments 2 3 4
-```
-
 ### Python API
 
 You can also use PyXDM as a library in your own Python scripts:
