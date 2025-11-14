@@ -15,7 +15,6 @@ try:
 
     class SelectiveScreenLog(ht.log.__class__):
         def __call__(self, *a, **k):
-            # Example: Only show warnings and above
             if self._level >= self.warning:
                 super().__call__(*a, **k)
 

@@ -167,25 +167,19 @@ class BeckePartitioning(PartitioningScheme):
         """
         from horton.part import BeckeWPart
 
-        # Use the provided grid directly - no need to create a new one
-        horton_grid = grid
-
-        # Compute total density
         dm_full = mol.get_dm_full()
-        rho_total = mol.obasis.compute_grid_density_dm(dm_full, horton_grid.points)
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
 
-        # Create Becke partition object
         becke = BeckeWPart(
             mol.coordinates,
             mol.numbers,
             mol.pseudo_numbers,
-            horton_grid,
+            grid,
             rho_total,
             local=False,
         )
         becke.do_all()
 
-        # Store partition object for grid projection
         self._partition_obj = becke
         self._partition_obj.name = self.NAME
 
@@ -238,22 +232,17 @@ class HirshfeldPartitioning(PartitioningScheme):
         if self.proatom_db is None:
             raise ValueError("Hirshfeld partitioning requires proatom_db path. Use --proatomdb argument.")
 
-        # Use the provided grid directly - no need to create a new one
-        horton_grid = grid
-
         # Load proatom database
         proatomdb = ProAtomDB.from_file(self.proatom_db)
 
-        # Compute total density
         dm_full = mol.get_dm_full()
-        rho_total = mol.obasis.compute_grid_density_dm(dm_full, horton_grid.points)
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
 
-        # Create Hirshfeld partition object
         hirshfeld = HirshfeldWPart(
             mol.coordinates,
             mol.numbers,
             mol.pseudo_numbers,
-            horton_grid,
+            grid,
             rho_total,
             proatomdb,
             local=False,
@@ -320,22 +309,17 @@ class HirshfeldIPartitioning(PartitioningScheme):
         if self.proatom_db is None:
             raise ValueError("Hirshfeld-I partitioning requires proatom_db path. Use --proatomdb argument.")
 
-        # Use the provided grid directly - no need to create a new one
-        horton_grid = grid
-
         # Load proatom database
         proatomdb = ProAtomDB.from_file(self.proatom_db)
 
-        # Compute total density
         dm_full = mol.get_dm_full()
-        rho_total = mol.obasis.compute_grid_density_dm(dm_full, horton_grid.points)
+        rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
 
-        # Create Hirshfeld-I partition object
         hirshfeld_i = HirshfeldIWPart(
             mol.coordinates,
             mol.numbers,
             mol.pseudo_numbers,
-            horton_grid,
+            grid,
             rho_total,
             proatomdb,
             local=False,
@@ -402,16 +386,11 @@ class IterativeStockholderPartitioning(PartitioningScheme):
         grid : Union[CustomGrid, Any]
             Integration grid for partitioning calculations
         """
-        try:
-            from horton.part import IterativeStockholderWPart
-        except ImportError:
-            raise ImportError("Horton library is required for Iterative Stockholder partitioning")
+        from horton.part import IterativeStockholderWPart
 
-        # Compute total density on the grid
         dm_full = mol.get_dm_full()
         rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
 
-        # Create Iterative Stockholder partition object
         iterstock = IterativeStockholderWPart(
             mol.coordinates,
             mol.numbers,
@@ -465,13 +444,10 @@ class MBISPartitioning(PartitioningScheme):
         grid : Union[CustomGrid, Any]
             Target integration grid (not used directly by MBIS but kept for interface consistency)
         """
-        from horton.part.mbis import MBISWPart
+        from horton.part import MBISWPart
 
-        # Compute total density
         dm_full = mol.get_dm_full()
         rho_total = mol.obasis.compute_grid_density_dm(dm_full, grid.points)
-
-        # Create MBIS partition object
         mbis = MBISWPart(
             mol.coordinates,
             mol.numbers,

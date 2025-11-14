@@ -144,11 +144,10 @@ class XDMSession:
             Dictionary of partition objects.
         """
         self.partitions = {}
-        self.partition_schemes = {}  # Store the partitioning scheme objects
+        self.partition_schemes = {}  
 
         for scheme in schemes:
             try:
-                # Prepare kwargs for scheme creation
                 scheme_kwargs = {}
                 if proatomdb:
                     scheme_kwargs["proatom_db"] = proatomdb
@@ -160,7 +159,7 @@ class XDMSession:
                 partition_obj = partitioning.get_partition_object()
                 if partition_obj is not None:
                     self.partitions[scheme] = partition_obj
-                    self.partition_schemes[scheme] = partitioning  # Store the scheme object too
+                    self.partition_schemes[scheme] = partitioning 
                 else:
                     logger.warning(f"No partition object available for {scheme}")
 

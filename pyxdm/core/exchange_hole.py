@@ -98,13 +98,11 @@ def compute_b_sigma(rho_sigma: np.ndarray, Q_sigma: np.ndarray) -> np.ndarray:
         else:
             return 1e-10
 
-        # Final calculation
         expo = np.exp(-x1)
         prefac = rho / expo
         alf = (8.0 * pi * prefac) ** third
         return float(x1 / alf)
 
-    # Vectorized computation
     b_sigma = np.zeros_like(rho_sigma)
 
     for i in range(len(rho_sigma)):

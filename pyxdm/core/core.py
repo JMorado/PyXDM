@@ -72,7 +72,6 @@ class XDMCalculator:
         props = {"rho_alpha": rho_alpha, "rho_beta": rho_beta, "b_alpha": b_alpha, "b_beta": b_beta}
 
         if anisotropic:
-            # Calculate the normalized gradient vectors and add them to the properties dict
             epsilon = 1e-12
             nabla_alpha_norm = np.linalg.norm(nabla_alpha, axis=1)[:, None]
             nabla_beta_norm = np.linalg.norm(nabla_beta, axis=1)[:, None]
@@ -91,22 +90,17 @@ class XDMCalculator:
 
         if not anisotropic:
             logger.debug(f"Calculating isotropic moment for atom {atom_idx} with order {order}")
-            # Capped b_sigma values
             b_alpha_capped = np.minimum(density_props["b_alpha"], r_i)
             b_beta_capped = np.minimum(density_props["b_beta"], r_i)
 
-            # The term that gets squared
             term_alpha_iso = r_i**order - (r_i - b_alpha_capped) ** order
             term_beta_iso = r_i**order - (r_i - b_beta_capped) ** order
 
-            # The integrand includes the square of the term
             integrand_alpha = density_props["rho_alpha"] * term_alpha_iso**2
             integrand_beta = density_props["rho_beta"] * term_beta_iso**2
 
-            # Perform the integration
             lambda_alpha = grid.integrate(integrand_alpha * weights_i)
             lambda_beta = grid.integrate(integrand_beta * weights_i)
-
             lambda_iso = lambda_alpha + lambda_beta
             return lambda_iso, None
         else:
@@ -114,15 +108,12 @@ class XDMCalculator:
             b_alpha_capped = np.minimum(density_props["b_alpha"], r_i)
             b_beta_capped = np.minimum(density_props["b_beta"], r_i)
 
-            # Get the magnitudes of the induced moments
             moment_mag_alpha = r_i**order - (r_i - b_alpha_capped) ** order
             moment_mag_beta = r_i**order - (r_i - b_beta_capped) ** order
 
-            # CORRECTED: Construct the vector using the density gradient direction
             term_alpha_vec = moment_mag_alpha[:, None] * density_props["u_alpha"]
             term_beta_vec = moment_mag_beta[:, None] * density_props["u_beta"]
 
-            # The rest of your calculation is correct
             outer_alpha = np.einsum("ni,nj->nij", term_alpha_vec, term_alpha_vec)
             outer_beta = np.einsum("ni,nj->nij", term_beta_vec, term_beta_vec)
 
