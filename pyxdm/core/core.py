@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class XDMCalculator:
     """Core calculator for XDM multipole moments."""
 
+    _MOLECULAR_GRID_SCHEMES = ['hirshfeld', 'hirshfeld-i', 'becke']
+
     def __init__(self, mol: Any) -> None:
         self.mol = mol
         self.n_atoms: int = mol.natom
@@ -142,11 +144,18 @@ class XDMCalculator:
         xdm_results = {f"<M{n}^2>": np.zeros(self.n_atoms) for n in order}
         xdm_results_tensor = {f"<M{n}^2>_tensor": np.full((self.n_atoms, *(3,3)), np.nan) for n in order}
         
-        for atom_idx in range(self.n_atoms):
-            grid = partition_obj.get_grid(atom_idx)
-            weights_i = partition_obj.cache.load("at_weights", atom_idx)
+
+        recompute_density_props = partition_obj.name not in self._MOLECULAR_GRID_SCHEMES
+        if not recompute_density_props:
+            grid = partition_obj.get_grid(0)
             density_props = self._compute_density_properties(grid.points, anisotropic=anisotropic)
 
+        for atom_idx in range(self.n_atoms):
+            if recompute_density_props:
+                grid = partition_obj.get_grid(atom_idx)
+                density_props = self._compute_density_properties(grid.points, anisotropic=anisotropic)
+
+            weights_i = partition_obj.cache.load("at_weights", atom_idx)
             for o in order:
                 iso, tensor = self._compute_moment_for_atom(atom_idx, grid, weights_i, o, density_props, anisotropic=anisotropic)
                 xdm_results[f"<M{o}^2>"][atom_idx] = iso
