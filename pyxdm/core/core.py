@@ -6,14 +6,14 @@ try:
     from .exchange_hole_cpp import compute_b_sigma
 except ImportError:
     from .exchange_hole import compute_b_sigma
-    
+
 logger = logging.getLogger(__name__)
 
 
 class XDMCalculator:
     """Core calculator for XDM multipole moments."""
 
-    _MOLECULAR_GRID_SCHEMES = ['hirshfeld', 'hirshfeld-i', 'becke']
+    _MOLECULAR_GRID_SCHEMES = ["hirshfeld", "hirshfeld-i", "becke"]
 
     def __init__(self, mol: Any) -> None:
         self.mol = mol
@@ -40,11 +40,11 @@ class XDMCalculator:
     def _compute_density_properties(self, grid_points: np.ndarray, anisotropic: bool = True) -> dict:
         """Compute density and derived properties on grid points."""
         if self._closed_shell:
-            rho_alpha = rho_beta = self.mol.obasis.compute_grid_density_dm(self.dm_alpha, grid_points) 
+            rho_alpha = rho_beta = self.mol.obasis.compute_grid_density_dm(self.dm_alpha, grid_points)
             tau_alpha = tau_beta = 2.0 * self.mol.obasis.compute_grid_kinetic_dm(self.dm_alpha, grid_points)
             nabla_alpha = nabla_beta = self.mol.obasis.compute_grid_gradient_dm(self.dm_alpha, grid_points)
             hessian_alpha = hessian_beta = self.mol.obasis.compute_grid_hessian_dm(self.dm_alpha, grid_points)
-            laplacian_alpha = laplacian_beta = (hessian_alpha[:, 0] + hessian_alpha[:, 3] + hessian_alpha[:, 5])
+            laplacian_alpha = laplacian_beta = hessian_alpha[:, 0] + hessian_alpha[:, 3] + hessian_alpha[:, 5]
         else:
             rho_alpha = self.mol.obasis.compute_grid_density_dm(self.dm_alpha, grid_points)
             rho_beta = self.mol.obasis.compute_grid_density_dm(self.dm_beta, grid_points)
@@ -65,7 +65,7 @@ class XDMCalculator:
 
         Q_alpha = (laplacian_alpha - 2.0 * d_alpha) / 6.0
         Q_beta = (laplacian_beta - 2.0 * d_beta) / 6.0
-        
+
         b_alpha = compute_b_sigma(rho_alpha, Q_alpha)
         b_beta = compute_b_sigma(rho_beta, Q_beta)
 
@@ -133,8 +133,7 @@ class XDMCalculator:
         logger.debug("Calculating XDM multipole moments for all atoms...")
         order = order if isinstance(order, list) else [order]
         xdm_results = {f"<M{n}^2>": np.zeros(self.n_atoms) for n in order}
-        xdm_results_tensor = {f"<M{n}^2>_tensor": np.full((self.n_atoms, *(3,3)), np.nan) for n in order}
-        
+        xdm_results_tensor = {f"<M{n}^2>_tensor": np.full((self.n_atoms, *(3, 3)), np.nan) for n in order}
 
         recompute_density_props = partition_obj.name not in self._MOLECULAR_GRID_SCHEMES
         if not recompute_density_props:

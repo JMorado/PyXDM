@@ -84,7 +84,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-
 def main() -> None:
     """
     Main CLI entry point.
@@ -109,8 +108,9 @@ def main() -> None:
         if args.scheme is not None:
             for scheme in args.scheme:
                 if scheme not in PartitioningSchemeFactory.available_schemes():
-                    raise ValueError(f"Unknown partitioning scheme: {scheme}. "
-                                     f"Available schemes are: {PartitioningSchemeFactory.available_schemes()}")
+                    raise ValueError(
+                        f"Unknown partitioning scheme: {scheme}. Available schemes are: {PartitioningSchemeFactory.available_schemes()}"
+                    )
         else:
             args.scheme = PartitioningSchemeFactory.available_schemes()
 
@@ -139,7 +139,7 @@ def main() -> None:
 
                 # Get the partitioning scheme object to compute charges and populations
                 partitioning_scheme = session.partition_schemes[scheme]
-                
+
                 # Store charges and populations
                 scheme_results.update(partitioning_scheme.get_charges(session.mol, session.calculator.dm_full))
                 scheme_results.update(partitioning_scheme.get_populations(session.mol, session.calculator.dm_full))
@@ -154,10 +154,10 @@ def main() -> None:
 
                 # Store atomic results
                 scheme_results.update(xdm_results)
-              
+
                 atomic_results = xdm_results[scheme].get("xdm_results", {})
                 tensor_results = xdm_results[scheme].get("xdm_results_tensor", {})
-             
+
                 # Log atomic data
                 atomic_data = {}
                 for key in atomic_results:
@@ -220,7 +220,7 @@ def main() -> None:
 
                 # Store all results for this scheme
                 all_results[scheme] = scheme_results
-              
+
         wall_time = time.time() - initial_time
         logger.info(f"Total wall time: {wall_time:.2f} seconds")
 
@@ -229,9 +229,9 @@ def main() -> None:
             if args.output:
                 output_file = args.output
             else:
-                input_path = Path(args.wfn_file + ".pyxdm") 
-                output_file = input_path.with_suffix('.h5')
-            if all_results:  
+                input_path = Path(args.wfn_file + ".pyxdm")
+                output_file = input_path.with_suffix(".h5")
+            if all_results:
                 write_h5_output(output_file, session, all_results)
 
         log_boxed_title("PyXDM terminated successfully! :)", logger=logger)

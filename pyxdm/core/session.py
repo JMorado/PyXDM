@@ -73,7 +73,7 @@ class XDMSession:
             logger.error(f"Error loading wavefunction file: {e}")
             sys.exit(1)
 
-    def setup_grid(self, mesh_file: Optional[str] = None, grid_definition: Any = 'ultrafine') -> None:
+    def setup_grid(self, mesh_file: Optional[str] = None, grid_definition: Any = "ultrafine") -> None:
         """
         Setup computational grid.
 
@@ -82,7 +82,7 @@ class XDMSession:
         mesh_file : str, optional
             Path to custom mesh file, if None uses default Becke grid
         grid_definition : Any, optional
-            Definition for the Becke grid (default is 'ultrafine'). 
+            Definition for the Becke grid (default is 'ultrafine').
             See Horton documentation for valid options:
             https://theochem.github.io/horton/2.0.1/lib/mod_horton_grid_atgrid.html?highlight=ultrafine#horton.grid.atgrid.AtomicGridSpec
 
@@ -144,7 +144,7 @@ class XDMSession:
             Dictionary of partition objects.
         """
         self.partitions = {}
-        self.partition_schemes = {}  
+        self.partition_schemes = {}
 
         for scheme in schemes:
             try:
@@ -159,7 +159,7 @@ class XDMSession:
                 partition_obj = partitioning.get_partition_object()
                 if partition_obj is not None:
                     self.partitions[scheme] = partition_obj
-                    self.partition_schemes[scheme] = partitioning 
+                    self.partition_schemes[scheme] = partitioning
                 else:
                     logger.warning(f"No partition object available for {scheme}")
 

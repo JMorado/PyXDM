@@ -86,7 +86,7 @@ class PartitioningScheme(ABC):
         """
         if self._partition_obj is None:
             raise ValueError("Partition object not computed. Run compute_weights first.")
-        
+
         charges = []
         for i in range(mol.natom):
             subgrid = self._partition_obj.get_grid(i)
@@ -116,7 +116,7 @@ class PartitioningScheme(ABC):
         """
         if self._partition_obj is None:
             raise ValueError("Partition object not computed. Run compute_weights first.")
-        
+
         populations = []
         for i in range(mol.natom):
             subgrid = self._partition_obj.get_grid(i)
@@ -135,7 +135,8 @@ class BeckePartitioning(PartitioningScheme):
     Uses Becke's fuzzy atom approach with smooth cutoff functions
     to partition molecular electron density into atomic contributions.
     """
-    NAME : str = "becke"
+
+    NAME: str = "becke"
 
     def __init__(self) -> None:
         """
@@ -183,6 +184,7 @@ class BeckePartitioning(PartitioningScheme):
         self._partition_obj = becke
         self._partition_obj.name = self.NAME
 
+
 class HirshfeldPartitioning(PartitioningScheme):
     """
     Hirshfeld partitioning scheme.
@@ -190,7 +192,8 @@ class HirshfeldPartitioning(PartitioningScheme):
     Uses reference atomic densities to define partitioning weights
     based on the ratio of atomic to molecular density contributions.
     """
-    NAME : str= "hirshfeld"
+
+    NAME: str = "hirshfeld"
 
     def __init__(self, proatom_db: Optional[str] = None) -> None:
         """
@@ -253,6 +256,7 @@ class HirshfeldPartitioning(PartitioningScheme):
         self._partition_obj = hirshfeld
         self._partition_obj.name = self.NAME
 
+
 class HirshfeldIPartitioning(PartitioningScheme):
     """
     Hirshfeld-I (Iterative) partitioning scheme.
@@ -260,6 +264,7 @@ class HirshfeldIPartitioning(PartitioningScheme):
     Iterative version of Hirshfeld partitioning that self-consistently
     updates reference atomic densities based on computed atomic charges.
     """
+
     NAME: str = "hirshfeld-i"
 
     def __init__(
@@ -332,6 +337,7 @@ class HirshfeldIPartitioning(PartitioningScheme):
         self._partition_obj = hirshfeld_i
         self._partition_obj.name = self.NAME
 
+
 class IterativeStockholderPartitioning(PartitioningScheme):
     """
     Iterative Stockholder (IS) partitioning scheme.
@@ -351,6 +357,7 @@ class IterativeStockholderPartitioning(PartitioningScheme):
     threshold : float
         Convergence threshold for density changes
     """
+
     NAME: str = "iterative-stockholder"
 
     def __init__(
@@ -407,6 +414,7 @@ class IterativeStockholderPartitioning(PartitioningScheme):
         self._partition_obj = iterstock
         self._partition_obj.name = self.NAME
 
+
 class MBISPartitioning(PartitioningScheme):
     """
     MBIS (Minimal Basis Iterative Stockholder) partitioning.
@@ -414,6 +422,7 @@ class MBISPartitioning(PartitioningScheme):
     MBIS uses iterative refinement to achieve self-consistent partitioning
     based on minimal basis set approximations of atomic densities.
     """
+
     NAME: str = "mbis"
 
     def __init__(self, maxiter: int = 500, threshold: float = 1e-6) -> None:
