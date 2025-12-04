@@ -17,7 +17,7 @@ PyXDM is a Python package for calculating XDM (Exchange-hole Dipole Moment) mult
 Create a conda environment with all the required dependencies:
 
 ```
-onda env create -f environment.yaml
+conda env create -f environment.yaml
 conda activate pyxdm
 ```
 
