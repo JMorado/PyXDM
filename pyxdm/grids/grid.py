@@ -23,15 +23,29 @@ def load_mesh(mesh_filename: str) -> Tuple[np.ndarray, np.ndarray]:
 
     with open(mesh_filename) as f:
         for line in f:
+            # Skip comment lines and empty lines
             if line.startswith("#") or len(line.strip()) == 0:
                 continue
+
+            # Remove inline comments
+            if "#" in line:
+                line = line[: line.index("#")]
+
             parts = line.split()
             if len(parts) >= 4:
-                x, y, z, w = map(float, parts[:4])
-                points.append([x, y, z])
-                weights.append(w)
+                try:
+                    x, y, z, w = map(float, parts[:4])
+                    points.append([x, y, z])
+                    weights.append(w)
+                except ValueError:
+                    # Skip lines that can't be parsed as floats
+                    continue
 
-    return np.array(points), np.array(weights)
+    points_array = np.array(points)
+    if len(points) == 0:
+        points_array = points_array.reshape(0, 3)
+
+    return points_array, np.array(weights)
 
 
 class CustomGrid:
