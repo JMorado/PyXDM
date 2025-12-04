@@ -1,5 +1,7 @@
 # PyXDM
 
+![PyXDM Logo](../dev/pyxdm_logo.png)
+
 PyXDM is a Python package for calculating XDM (Exchange-hole Dipole Moment) multipole moments using multiple atoms-in-molecules (AIM) partitioning schemes.
 
 ## Features
@@ -27,6 +29,8 @@ For developers:
 
 ```bash
 pip install -e .[dev]
+# Or install development dependencies separately:
+pip install -r dev/requirements-dev.txt
 ```
 
 ## Usage
@@ -36,7 +40,7 @@ pip install -e .[dev]
 After installation, use the `pyxdm` command:
 
 ```bash
-pyxdm <wfn_file> [OPTIONS]
+pyxdm <wfn_file> [optional]
 ```
 
 #### Arguments
@@ -72,7 +76,6 @@ You can also use PyXDM as a library in your own Python scripts:
 
 ```python
 from pyxdm.core import XDMSession
-from pyxdm.utils.io import write_h5_output
 
 session = XDMSession('examples/water/orca.molden.input')
 session.load_molecule()
@@ -85,7 +88,6 @@ xdm_results = session.calculator.calculate_xdm_moments(
     order=[1, 2, 3],
     anisotropic=False,
 )
-write_h5_output('pyxdm.h5', session, xdm_results)
 ```
 
 ## Acknowledgments
