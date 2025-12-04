@@ -28,7 +28,7 @@ def dump_to_h5(grp: str, data: Any) -> None:
         dictionary my contain numpy arrays
     """
     if isinstance(grp, str):
-        with h5py.File(grp, 'w') as f:
+        with h5py.File(grp, "w") as f:
             dump_to_h5(f, data)
     elif isinstance(data, dict):
         for key, value in data.items():
@@ -49,7 +49,7 @@ def dump_to_h5(grp: str, data: Any) -> None:
         data.to_hdf5(grp)
         # The following is needed to create object of the right type when
         # reading from the checkpoint:
-        grp.attrs['class'] = data.__class__.__name__
+        grp.attrs["class"] = data.__class__.__name__
 
 
 def write_h5_output(filename: str, session, xdm_results: Dict[str, Any], write_horton: bool = True) -> None:
@@ -67,6 +67,7 @@ def write_h5_output(filename: str, session, xdm_results: Dict[str, Any], write_h
     write_horton
         Whether to attempt to write the Horton partitioning results.
     """
+
     def get_horton_results(part, keys):
         results = {}
         for key in keys:
@@ -81,51 +82,50 @@ def write_h5_output(filename: str, session, xdm_results: Dict[str, Any], write_h
                 assert isinstance(index, int)
                 assert index >= 0
                 assert index < part.natom
-                atom_results = results.setdefault('atom_%05i' % index, {})
+                atom_results = results.setdefault("atom_%05i" % index, {})
                 atom_results[key[0]] = part[key]
         return results
 
     logger.info(f"Writing results to {filename}")
-    
-    with h5py.File(filename, 'w') as f:
+
+    with h5py.File(filename, "w") as f:
         # Write metadata
-        metadata = f.create_group('metadata')
-        metadata.attrs['pyxdm_version'] = __version__
-        metadata.attrs['wavefunction_file'] = str(session.wfn_file)
-        
+        metadata = f.create_group("metadata")
+        metadata.attrs["pyxdm_version"] = __version__
+        metadata.attrs["wavefunction_file"] = str(session.wfn_file)
+
         # Write molecular information
-        molecule = f.create_group('molecule')
-        molecule.create_dataset('atomic_numbers', data=session.mol.numbers)
-        molecule.create_dataset('coordinates', data=session.mol.coordinates)
-        
+        molecule = f.create_group("molecule")
+        molecule.create_dataset("atomic_numbers", data=session.mol.numbers)
+        molecule.create_dataset("coordinates", data=session.mol.coordinates)
+
         # Calculate nelec from populations (sum of all atomic populations)
         nelec = None
         if xdm_results:
             first_scheme_results = next(iter(xdm_results.values()))
-            if 'populations' in first_scheme_results:
-                nelec = int(round(np.sum(first_scheme_results['populations'])))
+            if "populations" in first_scheme_results:
+                nelec = int(round(np.sum(first_scheme_results["populations"])))
         
-        # Fallback to atomic numbers if populations not available
         if nelec is None:
-            nelec = int(np.sum(session.mol.numbers))
-            
-        molecule.create_dataset('nelec', data=nelec)
-        molecule.attrs['natom'] = session.mol.natom
-        
+            nelec = np.nan
+
+        molecule.create_dataset("nelec", data=nelec)
+        molecule.attrs["natom"] = session.mol.natom
+
         # Write atomic symbols as string dataset
-        symbols_str = [get_atomic_symbol(num).encode('utf-8') for num in session.mol.numbers]
-        molecule.create_dataset('atomic_symbols', data=symbols_str)
-        
+        symbols_str = [get_atomic_symbol(num).encode("utf-8") for num in session.mol.numbers]
+        molecule.create_dataset("atomic_symbols", data=symbols_str)
+
         # Write results for each partitioning scheme
         for scheme_name, results_data in xdm_results.items():
-            scheme_group = f.create_group(f'{scheme_name}')
+            scheme_group = f.create_group(f"{scheme_name}")
 
             # Write PyXDM-calculated results
-            xdm_group = scheme_group.create_group('xdm')
+            xdm_group = scheme_group.create_group("xdm")
             dump_to_h5(xdm_group, results_data)
 
             # Write Horton data
             if write_horton:
-                horton_group = scheme_group.create_group('horton')
+                horton_group = scheme_group.create_group("horton")
                 horton_data = get_horton_results(session.partitions[scheme_name], session.partitions[scheme_name].cache.keys())
                 dump_to_h5(horton_group, horton_data)
