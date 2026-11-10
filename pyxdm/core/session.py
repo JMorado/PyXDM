@@ -128,7 +128,7 @@ class XDMSession:
         self.calculator = XDMCalculator(self.mol)
         logger.debug("XDM calculator initialized")
 
-    def setup_partition_schemes(self, schemes, proatomdb: Optional[str] = None) -> dict:
+    def setup_partition_schemes(self, schemes, proatomdb: Optional[str] = None, weights_file: Optional[str] = None) -> dict:
         """
         Setup partitioning schemes for the session.
 
@@ -154,6 +154,8 @@ class XDMSession:
                 
         proatomdb : str, optional
             Path to proatom database for Hirshfeld-based schemes (hirshfeld, hirshfeld-i)
+        weights_file : str, optional
+            Path to the atomic weights for the external scheme
 
         Returns
         -------
@@ -173,6 +175,8 @@ class XDMSession:
                 scheme_kwargs = config.copy() if config else {}
                 if proatomdb:
                     scheme_kwargs["proatom_db"] = proatomdb
+                if weights_file:
+                    scheme_kwargs["weights_file"] = weights_file
 
                 partitioning = PartitioningSchemeFactory.create_scheme(scheme, **scheme_kwargs)
 

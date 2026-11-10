@@ -63,3 +63,50 @@ class TestCLI:
         monkeypatch.setattr(sys, "argv", [MOLDEN_FILE, "--scheme", "invalid_scheme"])
         with pytest.raises(SystemExit):
             main()
+
+
+def _write_mesh_and_weights(tmp_path: Path) -> tuple[Path, Path, np.ndarray, np.ndarray]:
+    """Write a water mesh and its Becke weights as text files."""
+    import horton as ht
+    from horton.part import BeckeWPart
+
+    mol = ht.IOData.from_file(MOLDEN_FILE)
+    grid = ht.BeckeMolGrid(mol.coordinates, mol.numbers, mol.pseudo_numbers, agspec="coarse", mode="keep", random_rotate=False)
+    density = mol.obasis.compute_grid_density_dm(mol.get_dm_full(), grid.points)
+    part = BeckeWPart(mol.coordinates, mol.numbers, mol.pseudo_numbers, grid, density, local=False)
+    part.do_all()
+    weights = np.column_stack([part.cache.load("at_weights", i) for i in range(mol.natom)])
+
+    mesh_file, weights_file = tmp_path / "mesh.txt", tmp_path / "weights.txt"
+    np.savetxt(mesh_file, np.column_stack([grid.points, grid.weights]), header="x y z w")
+    np.savetxt(weights_file, weights, header="weights")
+    return mesh_file, weights_file, np.column_stack([grid.points, grid.weights]), weights
+
+
+class TestExternalWeights:
+    def test_moments_match_direct_calculation(self, monkeypatch, tmp_path):
+        """--mesh with --weights gives the moments of the same weights computed directly."""
+        from ..core import XDMCalculator
+        from ..grids import CustomGrid
+        from ..partitioning.partitioning import ExternalPartition
+
+        mesh_file, weights_file, mesh, weights = _write_mesh_and_weights(tmp_path)
+        out = tmp_path / "water.h5"
+        run_cli(monkeypatch, [MOLDEN_FILE, "--mesh", str(mesh_file), "--weights", str(weights_file), "-o", str(out)])
+
+        import horton as ht
+
+        mol = ht.IOData.from_file(MOLDEN_FILE)
+        grid = CustomGrid(np.ascontiguousarray(mesh[:, :3]), mesh[:, 3])
+        expected = XDMCalculator(mol).calculate_xdm_moments(ExternalPartition(grid, weights), grid, order=[1, 2, 3])
+        with h5py.File(out, "r") as f:
+            for key in ("<M1^2>", "<M2^2>", "<M3^2>"):
+                np.testing.assert_allclose(
+                    f[f"external/xdm/external/xdm_results/{key}"][:], expected["external"]["xdm_results"][key], rtol=1e-6
+                )
+
+    def test_weights_require_mesh(self, monkeypatch, tmp_path):
+        """--weights without --mesh is rejected."""
+        _, weights_file, _, _ = _write_mesh_and_weights(tmp_path)
+        with pytest.raises(SystemExit):
+            run_cli(monkeypatch, [MOLDEN_FILE, "--weights", str(weights_file)])

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class XDMCalculator:
     """Core calculator for XDM multipole moments."""
 
-    _MOLECULAR_GRID_SCHEMES = ["hirshfeld", "hirshfeld-i", "becke"]
+    _MOLECULAR_GRID_SCHEMES = ["hirshfeld", "hirshfeld-i", "becke", "external"]
 
     def __init__(self, mol: Any) -> None:
         self.mol = mol

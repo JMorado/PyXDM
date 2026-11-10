@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+import numpy as np
+
 from ..grids import CustomGrid
 
 if TYPE_CHECKING:
@@ -503,6 +505,161 @@ class MBISPartitioning(PartitioningScheme):
         self._partition_obj.name = self.NAME
 
 
+class ExternalPartition:
+    """
+    Partition object holding atomic weights read from a file, all on one molecular mesh.
+
+    Attributes
+    ----------
+    name : str
+        Partition name, "external"
+    grid : Any
+        Molecular mesh shared by all atoms
+    weights : np.ndarray
+        Atomic weights of shape (n_points, n_atoms)
+    natom : int
+        Number of atoms
+    cache : ExternalPartition
+        The partition itself, which provides load() and keys() like a HORTON cache
+    """
+
+    def __init__(self, grid: Any, weights: np.ndarray) -> None:
+        """
+        Initialize the partition.
+
+        Parameters
+        ----------
+        grid : Any
+            Molecular mesh shared by all atoms
+        weights : np.ndarray
+            Atomic weights of shape (n_points, n_atoms)
+
+        Returns
+        -------
+        None
+        """
+        self.name = ExternalPartitioning.NAME
+        self.grid = grid
+        self.weights = weights
+        self.natom = weights.shape[1]
+        self.cache = self
+
+    def get_grid(self, index: int) -> Any:
+        """
+        Get the grid of an atom, the molecular mesh.
+
+        Parameters
+        ----------
+        index : int
+            Atom index
+
+        Returns
+        -------
+        Any
+            Molecular mesh
+        """
+        return self.grid
+
+    def load(self, key: str, index: int) -> np.ndarray:
+        """
+        Load the weights of an atom.
+
+        Parameters
+        ----------
+        key : str
+            Cache key, "at_weights"
+        index : int
+            Atom index
+
+        Returns
+        -------
+        np.ndarray
+            Weights of the atom on the mesh
+        """
+        if key != "at_weights":
+            raise KeyError(key)
+        return self.weights[:, index]
+
+    def keys(self) -> list[tuple[str, int]]:
+        """
+        List the stored items, as a HORTON cache does.
+
+        Returns
+        -------
+        list[tuple[str, int]]
+            ("at_weights", index) for each atom
+        """
+        return [("at_weights", i) for i in range(self.natom)]
+
+    def __getitem__(self, key: tuple[str, int]) -> np.ndarray:
+        """
+        Get a stored item by its cache key.
+
+        Parameters
+        ----------
+        key : tuple[str, int]
+            ("at_weights", index)
+
+        Returns
+        -------
+        np.ndarray
+            Weights of the atom on the mesh
+        """
+        return self.load(*key)
+
+
+class ExternalPartitioning(PartitioningScheme):
+    """
+    Atomic weights read from a file.
+
+    The file has one line per mesh point, in the order of the mesh (--mesh), and one column per atom, in the order of
+    the wavefunction file. Lines starting with "#" are ignored.
+    """
+
+    NAME: str = "external"
+
+    def __init__(self, weights_file: Optional[str] = None) -> None:
+        """
+        Initialize external partitioning.
+
+        Parameters
+        ----------
+        weights_file : Optional[str], default=None
+            Path to the weights file
+
+        Returns
+        -------
+        None
+        """
+        super().__init__()
+        self.weights_file = weights_file
+
+    def compute_weights(self, mol: Any, grid: Union[CustomGrid, Any]) -> None:
+        """
+        Read the atomic weights and create the partition object.
+
+        Parameters
+        ----------
+        mol : Any
+            Molecule object
+        grid : Union[CustomGrid, Any]
+            Mesh the weights are given on
+
+        Returns
+        -------
+        None
+        """
+        if self.weights_file is None:
+            raise ValueError("External partitioning requires a weights file. Use --weights argument.")
+
+        weights = np.loadtxt(self.weights_file, comments="#", ndmin=2)
+        n_points = len(grid.points)
+        if weights.shape != (n_points, mol.natom):
+            raise ValueError(f"Weights file has shape {weights.shape}, expected ({n_points}, {mol.natom}) for this mesh and molecule")
+
+        self._partition_obj = ExternalPartition(grid, weights)
+
+
 class PartitioningSchemeFactory:
     """
     Factory for creating partitioning schemes.
@@ -517,6 +674,7 @@ class PartitioningSchemeFactory:
         HirshfeldPartitioning.NAME: HirshfeldPartitioning,
         HirshfeldIPartitioning.NAME: HirshfeldIPartitioning,
         IterativeStockholderPartitioning.NAME: IterativeStockholderPartitioning,
+        ExternalPartitioning.NAME: ExternalPartitioning,
     }
 
     @classmethod
@@ -529,7 +687,7 @@ class PartitioningSchemeFactory:
         scheme_name : str
             Name of the partitioning scheme to create.
             Available schemes: 'mbis', 'becke', 'hirshfeld', 'hirshfeld-i',
-            'iterative-stockholder'
+            'iterative-stockholder', 'external'
         **kwargs
             Additional keyword arguments passed to the scheme constructor.
             Different schemes accept different parameters:
@@ -538,6 +696,7 @@ class PartitioningSchemeFactory:
             - hirshfeld: proatom_db, lmax
             - hirshfeld-i: proatom_db, lmax, maxiter, threshold
             - iterative-stockholder: lmax, maxiter, threshold
+            - external: weights_file
 
         Returns
         -------
@@ -563,6 +722,9 @@ class PartitioningSchemeFactory:
         elif scheme_name in [HirshfeldIPartitioning.NAME]:
             # Hirshfeld-I accepts proatom_db, lmax, maxiter, threshold
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["proatom_db", "lmax", "maxiter", "threshold"]}
+        elif scheme_name in [ExternalPartitioning.NAME]:
+            # External partitioning only accepts 'weights_file'
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["weights_file"]}
         elif scheme_name in [IterativeStockholderPartitioning.NAME, "iterstock", "is"]:
             # Iterative Stockholder accepts lmax, maxiter, threshold
             filtered_kwargs = {k: v for k, v in kwargs.items() if k in ["lmax", "maxiter", "threshold"]}
