@@ -52,7 +52,8 @@ pyxdm <wfn_file> [optional]
 - `<wfn_file>`: Path to the wavefunction file (Molden, WFN, etc.)
 
 ##### Optional
-- `--mesh <file>`: Optional postg mesh file for integration grid
+- `--mesh <file>`: Integration mesh read from a file instead of a HORTON grid (see [Mesh and weight files](#mesh-and-weight-files))
+- `--weights <file>`: Atomic weights on the `--mesh` points read from a file, used as the `external` partitioning scheme (see [Mesh and weight files](#mesh-and-weight-files))
 - `--scheme <schemes>`: Partitioning scheme(s) to use, separated by comma. If not specified, all available schemes are calculated. Available schemes: `becke`, `hirshfeld`, `hirshfeld_i`, `is`, `mbis`
 - `--proatomdb <path>`: Path to proatom database file (required for Hirshfeld schemes)
 - `--grid <quality>`: Grid quality for numerical integration. Options: `coarse`, `medium`, `fine`, `veryfine`, `ultrafine`, `insane` (default: `fine`)
@@ -71,6 +72,20 @@ pyxdm orca.molden.input --scheme mbis
 Calculate multiple schemes with custom grid granularity:
 ```bash
 pyxdm orca.molden.input --scheme mbis,becke --grid ultrafine
+```
+
+#### Mesh and weight files
+
+`--mesh` and `--weights` are plain text files; lines starting with `#` are ignored.
+
+- **Mesh:** one integration point per line, `x y z w`, with the Cartesian coordinates in bohr and the integration
+  weight, so that `sum_i w_i f(r_i)` approximates the integral of `f` over all space.
+- **Weights:** one line per mesh point, in the same order as the mesh, and one column per atom, in the order of the
+  wavefunction file. Each column holds the weight of that atom at each point; at every point the weights of all atoms
+  usually sum to 1.
+
+```bash
+pyxdm molecule.molden.input --mesh mesh.txt --weights weights.txt
 ```
 
 ### Python API

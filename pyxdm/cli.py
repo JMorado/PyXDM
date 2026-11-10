@@ -32,7 +32,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("wfn_file", help="Wavefunction file (molden, wfn, etc.)")
 
-    parser.add_argument("--mesh", help="Optional postg mesh file")
+    parser.add_argument("--mesh", help="Optional mesh file: one point per line, x y z (bohr) and integration weight w")
+
+    parser.add_argument(
+        "--weights",
+        help="Atomic weights on the --mesh points: one line per point, in mesh order, and one column per atom; selects the 'external' scheme",
+    )
 
     parser.add_argument(
         "--xdm-moments",
@@ -106,6 +111,11 @@ def main() -> None:
         session.setup_grid(args.mesh, grid_definition=args.grid)
         session.setup_calculator()
 
+        if args.weights and not args.mesh:
+            raise ValueError("--weights requires --mesh")
+        if args.weights and args.scheme is None:
+            args.scheme = ["external"]
+
         if args.scheme is not None:
             for scheme in args.scheme:
                 if scheme not in PartitioningSchemeFactory.available_schemes():
@@ -113,11 +123,12 @@ def main() -> None:
                         f"Unknown partitioning scheme: {scheme}. Available schemes are: {PartitioningSchemeFactory.available_schemes()}"
                     )
         else:
-            args.scheme = PartitioningSchemeFactory.available_schemes()
+            args.scheme = [scheme for scheme in PartitioningSchemeFactory.available_schemes() if scheme != "external"]
 
         session.setup_partition_schemes(
             args.scheme,
             proatomdb=args.proatomdb,
+            weights_file=args.weights,
         )
 
         at_symbols = [get_atomic_symbol(num) for num in session.mol.numbers]

@@ -218,3 +218,39 @@ class TestGetPopulationsWithMock:
         result = scheme.get_populations(mol, MagicMock())
         for pop in result["becke"]["populations"]:
             assert isinstance(pop, float)
+
+
+class TestExternalPartitioning:
+    def test_factory_creates_external(self):
+        scheme = PartitioningSchemeFactory.create_scheme("external", weights_file="w.txt", proatom_db="ignored")
+        assert scheme.weights_file == "w.txt"
+
+    def test_requires_weights_file(self):
+        with pytest.raises(ValueError, match="weights file"):
+            PartitioningSchemeFactory.create_scheme("external").compute_weights(MagicMock(), MagicMock())
+
+    def test_rejects_wrong_shape(self, tmp_path):
+        """A weights file that does not match the mesh and molecule is rejected."""
+        weights_file = tmp_path / "w.txt"
+        np.savetxt(weights_file, np.ones((5, 2)))
+        mol, grid = MagicMock(), MagicMock()
+        mol.natom = 3
+        grid.points = np.zeros((5, 3))
+        with pytest.raises(ValueError, match="shape"):
+            PartitioningSchemeFactory.create_scheme("external", weights_file=str(weights_file)).compute_weights(mol, grid)
+
+    def test_partition_object(self, tmp_path):
+        """The partition object returns each atom's column and lists them like a HORTON cache."""
+        weights_file = tmp_path / "w.txt"
+        weights = np.arange(10.0).reshape(5, 2)
+        np.savetxt(weights_file, weights)
+        mol, grid = MagicMock(), MagicMock()
+        mol.natom = 2
+        grid.points = np.zeros((5, 3))
+        scheme = PartitioningSchemeFactory.create_scheme("external", weights_file=str(weights_file))
+        scheme.compute_weights(mol, grid)
+        part = scheme.get_partition_object()
+        assert part.name == "external"
+        np.testing.assert_array_equal(part.cache.load("at_weights", 1), weights[:, 1])
+        assert part.cache.keys() == [("at_weights", 0), ("at_weights", 1)]
+        np.testing.assert_array_equal(part[("at_weights", 0)], weights[:, 0])
